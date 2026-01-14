@@ -8,7 +8,7 @@ import { Metrics, ScheduleData, CourseType } from '../types';
 import { VI_DAYS_OF_WEEK } from '../constants';
 import { 
   AlertTriangle, Calendar, Layers, MapPin, Users, Activity, 
-  Lightbulb, GraduationCap, LayoutGrid, Clock
+  Lightbulb, GraduationCap, LayoutGrid, Clock, Briefcase, User
 } from 'lucide-react';
 
 interface StatisticsViewProps {
@@ -69,60 +69,86 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
   }, [data.allCourses]);
 
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-500 font-sans">
-      {/* 1. HEADER CARD */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-lg border border-slate-700">
-        <h2 className="text-2xl font-black uppercase tracking-tight">{data.metadata.teacher}</h2>
-        <div className="flex items-center gap-4 mt-2 text-slate-300 text-sm font-medium">
-          <span className="flex items-center gap-1"><Calendar size={14} /> Học kỳ: {data.metadata.semester}</span>
-          <span className="w-1 h-1 bg-slate-500 rounded-full"></span>
-          <span>Năm học: {data.metadata.academicYear}</span>
+    <div className="space-y-8 pb-20 animate-in fade-in duration-500 font-sans">
+      
+      {/* 1. HEADER CARD (BLUE TONE) */}
+      <div className="bg-gradient-to-r from-blue-700 to-cyan-600 text-white p-8 rounded-3xl shadow-xl shadow-blue-900/10 border border-blue-500/30 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-10 transform translate-x-1/4 -translate-y-1/4">
+           <User size={200} />
+        </div>
+        <div className="relative z-10">
+          <h2 className="text-3xl font-black uppercase tracking-tight mb-2">{data.metadata.teacher}</h2>
+          <div className="flex flex-wrap items-center gap-6 text-blue-50 text-sm font-medium">
+            <span className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full"><Briefcase size={14} /> Học kỳ: {data.metadata.semester}</span>
+            <span className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full"><Calendar size={14} /> Năm học: {data.metadata.academicYear}</span>
+          </div>
         </div>
       </div>
 
-      {/* 2. MERGED OVERVIEW CARD */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-        <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-          <Activity size={16} className="text-blue-500" /> Tổng quan
-        </h3>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-           {/* Key Metrics */}
-           <div className="grid grid-cols-3 gap-6 text-center lg:border-r border-slate-100 dark:border-slate-800 lg:pr-8">
-              <div>
-                 <p className="text-3xl font-black text-slate-800 dark:text-slate-100">{metrics.totalWeeks}</p>
-                 <p className="text-[10px] text-slate-400 uppercase font-bold mt-1">Tuần dạy</p>
+      {/* 2. REDESIGNED OVERVIEW CARD (HIGHLIGHT) */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        {/* Top Section: High Impact Metrics */}
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 text-white relative">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+           
+           <h3 className="relative z-10 text-xs font-black text-blue-400 uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
+              <Activity size={16} /> Tổng quan hoạt động
+           </h3>
+
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+              <div className="flex flex-col">
+                 <span className="text-5xl font-black tracking-tighter text-blue-400">{metrics.totalHours}</span>
+                 <span className="text-sm font-bold text-slate-400 uppercase mt-1">Tổng tiết giảng</span>
               </div>
-              <div>
-                 <p className="text-3xl font-black text-indigo-600 dark:text-indigo-400">{metrics.totalSessions}</p>
-                 <p className="text-[10px] text-slate-400 uppercase font-bold mt-1">Buổi dạy</p>
+              <div className="flex flex-col md:border-l border-slate-700 md:pl-8">
+                 <span className="text-4xl font-black tracking-tighter">{metrics.totalSessions}</span>
+                 <span className="text-sm font-bold text-slate-400 uppercase mt-1">Buổi lên lớp</span>
               </div>
-              <div>
-                 <p className="text-3xl font-black text-blue-600 dark:text-blue-400">{metrics.totalHours}</p>
-                 <p className="text-[10px] text-slate-400 uppercase font-bold mt-1">Tiết</p>
+              <div className="flex flex-col md:border-l border-slate-700 md:pl-8">
+                 <span className="text-4xl font-black tracking-tighter">{metrics.totalWeeks}</span>
+                 <span className="text-sm font-bold text-slate-400 uppercase mt-1">Tuần thực dạy</span>
               </div>
            </div>
+        </div>
 
-           {/* Scope breakdown */}
-           <div className="flex items-center justify-between gap-4">
-              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex-1 text-center">
-                 <p className="text-xl font-black text-slate-800 dark:text-slate-100">{metrics.totalCourses}</p>
-                 <p className="text-[10px] text-slate-400 uppercase">Môn</p>
+        {/* Bottom Section: Scope Breakdown */}
+        <div className="p-6 bg-slate-50 dark:bg-slate-900/50">
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-between group hover:border-blue-500 transition-colors">
+                 <div>
+                    <p className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-blue-600 transition-colors">{metrics.totalCourses}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Môn học</p>
+                 </div>
+                 <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-slate-700 text-blue-500 flex items-center justify-center">
+                    <Briefcase size={16} />
+                 </div>
               </div>
-              <div className="text-slate-300">|</div>
-              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex-1 text-center">
-                 <p className="text-xl font-black text-slate-800 dark:text-slate-100">{metrics.classDistribution.length}</p>
-                 <p className="text-[10px] text-slate-400 uppercase">Lớp</p>
+              <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-between group hover:border-emerald-500 transition-colors">
+                 <div>
+                    <p className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 transition-colors">{metrics.classDistribution.length}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Lớp SV</p>
+                 </div>
+                 <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-slate-700 text-emerald-500 flex items-center justify-center">
+                    <GraduationCap size={16} />
+                 </div>
               </div>
-              <div className="text-slate-300">|</div>
-              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex-1 text-center">
-                 <p className="text-xl font-black text-slate-800 dark:text-slate-100">{metrics.totalGroups}</p>
-                 <p className="text-[10px] text-slate-400 uppercase">Nhóm</p>
+              <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-between group hover:border-purple-500 transition-colors">
+                 <div>
+                    <p className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-purple-600 transition-colors">{metrics.totalGroups}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Nhóm HP</p>
+                 </div>
+                 <div className="w-8 h-8 rounded-full bg-purple-50 dark:bg-slate-700 text-purple-500 flex items-center justify-center">
+                    <Users size={16} />
+                 </div>
               </div>
-              <div className="text-slate-300">|</div>
-              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex-1 text-center">
-                 <p className="text-xl font-black text-slate-800 dark:text-slate-100">{metrics.totalRooms}</p>
-                 <p className="text-[10px] text-slate-400 uppercase">Phòng</p>
+              <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-between group hover:border-orange-500 transition-colors">
+                 <div>
+                    <p className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-orange-600 transition-colors">{metrics.totalRooms}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Phòng</p>
+                 </div>
+                 <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-slate-700 text-orange-500 flex items-center justify-center">
+                    <MapPin size={16} />
+                 </div>
               </div>
            </div>
         </div>
