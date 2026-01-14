@@ -16,7 +16,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import UploadZone from './components/UploadZone';
 
-const VERSION = '0.011';
+const VERSION = '0.012';
 
 const App: React.FC = () => {
   const [data, setData] = useState<ScheduleData | null>(null);

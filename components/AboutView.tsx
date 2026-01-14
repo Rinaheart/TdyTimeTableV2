@@ -8,6 +8,16 @@ interface AboutViewProps {
 
 const CHANGE_LOG = [
   {
+    version: 'v0.012',
+    date: '2026-01-16',
+    changes: [
+      'UI Thống kê: Tối ưu biểu đồ Chi tiết môn học (Sắp xếp giảm dần, thêm đơn vị).',
+      'UI Thống kê: Biểu đồ cường độ buổi dạy được làm dày hơn để dễ quan sát.',
+      'UI: Loại bỏ khoảng trắng thừa ở các card thống kê.',
+      'Version: Cập nhật hệ thống lên phiên bản 0.012.'
+    ]
+  },
+  {
     version: 'v0.011',
     date: '2026-01-15',
     changes: [

@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, BarChart, Bar
+  PieChart, Pie, Cell, BarChart, Bar, LabelList
 } from 'recharts';
 import { Metrics, ScheduleData, CourseType } from '../types';
 import { VI_DAYS_OF_WEEK } from '../constants';
@@ -58,7 +58,7 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
     value: d.count 
   }));
 
-  // Improved Logic for Subjects
+  // Improved Logic for Subjects (Sorted Descending)
   const subjectWeights = React.useMemo(() => {
     const map = new Map<string, number>();
     data.allCourses.forEach(c => {
@@ -197,12 +197,12 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
             </div>
             <div>
                <p className="text-[10px] text-slate-400 uppercase font-bold mb-2">Cường độ theo Buổi</p>
-               <div className="space-y-3 pt-2">
+               <div className="space-y-4 pt-2">
                   <div className="flex justify-between items-center text-xs">
                      <span className="text-slate-500 font-bold">Sáng</span>
                      <span className="font-black text-blue-600">{metrics.peakWeekShiftStats.morning} buổi</span>
                   </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-5 overflow-hidden">
                      <div className="bg-blue-500 h-full transition-all duration-500" style={{width: `${(metrics.peakWeekShiftStats.morning / 7)*100}%`}}></div>
                   </div>
                   
@@ -210,7 +210,7 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
                      <span className="text-slate-500 font-bold">Chiều</span>
                      <span className="font-black text-amber-600">{metrics.peakWeekShiftStats.afternoon} buổi</span>
                   </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-5 overflow-hidden">
                      <div className="bg-amber-500 h-full transition-all duration-500" style={{width: `${(metrics.peakWeekShiftStats.afternoon / 7)*100}%`}}></div>
                   </div>
 
@@ -218,7 +218,7 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
                      <span className="text-slate-500 font-bold">Tối</span>
                      <span className="font-black text-purple-600">{metrics.peakWeekShiftStats.evening} buổi</span>
                   </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-5 overflow-hidden">
                      <div className="bg-purple-500 h-full transition-all duration-500" style={{width: `${(metrics.peakWeekShiftStats.evening / 7)*100}%`}}></div>
                   </div>
                </div>
@@ -304,14 +304,15 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
          </div>
       </div>
 
-      {/* 7. SUBJECT DETAILS - BAR CHART (REPLACED TREEMAP) */}
+      {/* 7. SUBJECT DETAILS - BAR CHART (SORTED & OPTIMIZED) */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
          <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
            <Layers size={16} className="text-indigo-500" /> Chi tiết theo môn
          </h3>
-         <div className="h-[300px]">
+         {/* Dynamic Height */}
+         <div style={{ height: Math.max(subjectWeights.length * 50, 200) }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={subjectWeights} layout="vertical" margin={{ left: 20, right: 20 }}>
+              <BarChart data={subjectWeights} layout="vertical" margin={{ left: 20, right: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" className="dark:stroke-slate-700" />
                 <XAxis type="number" hide />
                 <YAxis 
@@ -327,10 +328,16 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
                   cursor={{fill: 'transparent'}} 
                   contentStyle={{borderRadius: '8px', fontSize: '12px'}} 
                 />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={18}>
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
                   {subjectWeights.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={getSubjectColor(index)} />
                   ))}
+                  <LabelList 
+                    dataKey="value" 
+                    position="right" 
+                    formatter={(val: number) => `${val} tiết`}
+                    style={{ fontSize: '10px', fontWeight: 'bold', fill: '#64748b' }}
+                  />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
