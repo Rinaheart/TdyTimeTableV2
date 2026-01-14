@@ -4,7 +4,7 @@ import { Thresholds, ScheduleData, CourseType } from '../types';
 import { 
   Shield, AlertTriangle, Save, RefreshCw, 
   FileJson, FileSpreadsheet, ChevronUp, ChevronDown, 
-  ListChecks, Check, Download, BellRing 
+  ListChecks, Check, Download, BellRing, Type, Wand2
 } from 'lucide-react';
 import { DEFAULT_THRESHOLDS } from '../constants';
 
@@ -15,13 +15,20 @@ interface SettingsViewProps {
   data: ScheduleData;
   overrides: Record<string, CourseType>;
   onSaveOverrides: (o: Record<string, CourseType>) => void;
+  abbreviations: Record<string, string>;
+  onSaveAbbreviations: (a: Record<string, string>) => void;
 }
 
 type SortField = 'code' | 'name' | 'classes' | 'groups';
 
-const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, overrides, onSaveOverrides }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ 
+  thresholds, onSave, data, overrides, onSaveOverrides,
+  abbreviations, onSaveAbbreviations 
+}) => {
   const [tempThresholds, setTempThresholds] = useState<Thresholds>(thresholds);
   const [tempOverrides, setTempOverrides] = useState<Record<string, CourseType>>(overrides);
+  const [tempAbbreviations, setTempAbbreviations] = useState<Record<string, string>>(abbreviations);
+  
   const [sortField, setSortField] = useState<SortField>('code');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
@@ -33,6 +40,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  // Derived unique subjects for abbreviations
+  const uniqueSubjects = useMemo(() => {
+    const map = new Map<string, string>();
+    data.allCourses.forEach(c => {
+       // Only care about the name string
+       if (!map.has(c.name)) map.set(c.name, c.name);
+    });
+    return Array.from(map.values()).sort();
+  }, [data.allCourses]);
 
   const sortedCourses = useMemo(() => {
     return [...data.allCourses].sort((a, b) => {
@@ -61,6 +78,35 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
     setToast({ message: "Đã lưu tùy chỉnh giảng dạy thành công!", type: "success" });
   };
 
+  const handleSaveAbbreviations = () => {
+    onSaveAbbreviations(tempAbbreviations);
+    setToast({ message: "Đã lưu tên viết tắt thành công!", type: "success" });
+  };
+
+  const suggestAbbreviations = () => {
+    const newAbbr = { ...tempAbbreviations };
+    uniqueSubjects.forEach(name => {
+      // Suggestion logic: 
+      // Split by space. 
+      // Keep words that are symbols like "&" or "-".
+      // Keep words that are fully uppercase (e.g. SSCĐ).
+      // Take first letter and uppercase for normal words.
+      const abbr = name.split(' ').map(part => {
+        if (part === '-' || part === '&') return part;
+        if (/^[A-ZĐ0-9]{2,}$/.test(part)) return part; // Keep existing acronyms
+        // Handle parts like "(LT)", "(TH)"
+        if (part.startsWith('(') && part.endsWith(')')) return part;
+        return part.charAt(0).toUpperCase();
+      }).join('');
+      
+      if (!newAbbr[name]) {
+         newAbbr[name] = abbr;
+      }
+    });
+    setTempAbbreviations(newAbbr);
+    setToast({ message: "Đã tạo đề xuất tên viết tắt!", type: "success" });
+  };
+
   const handleSaveThresholds = () => {
     onSave(tempThresholds);
     setToast({ message: "Đã lưu ngưỡng cảnh báo thành công!", type: "success" });
@@ -87,7 +133,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
   };
 
   const exportBackup = () => {
-    const backup = { ...data, overrides: tempOverrides };
+    const backup = { ...data, overrides: tempOverrides, abbreviations: tempAbbreviations };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -116,7 +162,68 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
         </div>
       )}
 
-      {/* CARD 1: Tùy chỉnh hình thức giảng dạy */}
+      {/* CARD 1: Tên môn học viết tắt */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <Type size={20} className="text-purple-600" /> Tên môn học viết tắt (Abbreviations)
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">Giúp hiển thị gọn gàng trên lịch tuần và file xuất Google Calendar.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={suggestAbbreviations}
+              className="px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-[10px] font-bold rounded-lg border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors flex items-center gap-2"
+            >
+              <Wand2 size={14} /> Đề xuất
+            </button>
+          </div>
+        </div>
+        
+        <div className="overflow-x-auto custom-scrollbar max-h-[300px]">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 z-10">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-400 uppercase w-12 text-center">STT</th>
+                <th className="px-4 py-3 font-bold text-slate-400 uppercase">Tên môn học gốc</th>
+                <th className="px-4 py-3 font-bold text-slate-400 uppercase w-1/3">Tên viết tắt</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+               {uniqueSubjects.map((name, idx) => (
+                 <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-3 text-center text-slate-400 font-medium">{idx + 1}</td>
+                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">{name}</td>
+                    <td className="px-4 py-3">
+                       <input 
+                         type="text" 
+                         value={tempAbbreviations[name] || ''} 
+                         onChange={(e) => setTempAbbreviations({...tempAbbreviations, [name]: e.target.value})}
+                         placeholder="Nhập tên viết tắt..."
+                         className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 font-mono text-purple-600 dark:text-purple-400 font-bold"
+                       />
+                    </td>
+                 </tr>
+               ))}
+               {uniqueSubjects.length === 0 && (
+                 <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-400 italic">Chưa có dữ liệu môn học.</td></tr>
+               )}
+            </tbody>
+          </table>
+        </div>
+        
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 flex justify-end border-t border-slate-100 dark:border-slate-800">
+           <button 
+             onClick={handleSaveAbbreviations}
+             className="px-6 py-2.5 bg-purple-600 text-white text-xs font-bold rounded-xl shadow-lg hover:bg-purple-700 active:scale-95 transition-all flex items-center gap-2"
+           >
+             <Save size={16} /> Lưu tên viết tắt
+           </button>
+        </div>
+      </div>
+
+      {/* CARD 2: Tùy chỉnh hình thức giảng dạy */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -215,7 +322,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* CARD 2: Ngưỡng cảnh báo */}
+        {/* CARD 3: Ngưỡng cảnh báo */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -275,7 +382,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
           </div>
         </div>
 
-        {/* CARD 3: Xuất dữ liệu */}
+        {/* CARD 4: Xuất dữ liệu */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">

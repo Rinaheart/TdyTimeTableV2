@@ -85,28 +85,28 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
         </div>
       </div>
 
-      {/* 2. REDESIGNED OVERVIEW CARD (HIGHLIGHT) */}
+      {/* 2. REDESIGNED OVERVIEW CARD (ORANGE GRADIENT) */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Top Section: High Impact Metrics */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 text-white relative">
-           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+        <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-8 text-white relative">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
            
-           <h3 className="relative z-10 text-xs font-black text-blue-400 uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
+           <h3 className="relative z-10 text-xs font-black text-amber-100 uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
               <Activity size={16} /> Tổng quan hoạt động
            </h3>
 
            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
               <div className="flex flex-col">
-                 <span className="text-5xl font-black tracking-tighter text-blue-400">{metrics.totalHours}</span>
-                 <span className="text-sm font-bold text-slate-400 uppercase mt-1">Tổng tiết giảng</span>
+                 <span className="text-5xl font-black tracking-tighter text-white">{metrics.totalHours}</span>
+                 <span className="text-sm font-bold text-amber-100 uppercase mt-1">Tổng tiết giảng</span>
               </div>
-              <div className="flex flex-col md:border-l border-slate-700 md:pl-8">
-                 <span className="text-4xl font-black tracking-tighter">{metrics.totalSessions}</span>
-                 <span className="text-sm font-bold text-slate-400 uppercase mt-1">Buổi lên lớp</span>
+              <div className="flex flex-col md:border-l border-white/20 md:pl-8">
+                 <span className="text-4xl font-black tracking-tighter text-white">{metrics.totalSessions}</span>
+                 <span className="text-sm font-bold text-amber-100 uppercase mt-1">Buổi lên lớp</span>
               </div>
-              <div className="flex flex-col md:border-l border-slate-700 md:pl-8">
-                 <span className="text-4xl font-black tracking-tighter">{metrics.totalWeeks}</span>
-                 <span className="text-sm font-bold text-slate-400 uppercase mt-1">Tuần thực dạy</span>
+              <div className="flex flex-col md:border-l border-white/20 md:pl-8">
+                 <span className="text-4xl font-black tracking-tighter text-white">{metrics.totalWeeks}</span>
+                 <span className="text-sm font-bold text-amber-100 uppercase mt-1">Tuần thực dạy</span>
               </div>
            </div>
         </div>

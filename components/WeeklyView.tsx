@@ -1,8 +1,8 @@
 
-import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, AlertCircle, CalendarPlus, LayoutTemplate, Columns, Zap } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, MapPin, AlertCircle, CalendarPlus, LayoutTemplate, Columns, Zap, X, CheckSquare, Square, Download } from 'lucide-react';
 import { WeekSchedule, Thresholds, CourseSession, DaySchedule, FilterState, CourseType } from '../types';
-import { VI_DAYS_OF_WEEK, DAYS_OF_WEEK, SESSION_COLORS } from '../constants';
+import { VI_DAYS_OF_WEEK, DAYS_OF_WEEK, SESSION_COLORS, PERIOD_TIMES } from '../constants';
 import FilterBar from './FilterBar';
 
 interface WeeklyViewProps {
@@ -17,9 +17,11 @@ interface WeeklyViewProps {
   thresholds: Thresholds;
   allWeeks: WeekSchedule[];
   overrides: Record<string, CourseType>;
+  abbreviations: Record<string, string>;
 }
 
-const SLOT_TIMES: Record<number, string> = {
+// Keep for rendering check (isCurrent)
+const SLOT_TIMES_LOOKUP: Record<number, string> = {
   1: "070000", 2: "075500", 3: "085000", 4: "094500",
   5: "104000",
   6: "133000", 7: "142500", 8: "152000", 9: "161500",
@@ -54,7 +56,7 @@ const isSessionCurrent = (session: CourseSession, sessionDateStr: string): boole
   }
 
   const [startP, endP] = session.timeSlot.split('-').map(Number);
-  const startStr = SLOT_TIMES[startP];
+  const startStr = SLOT_TIMES_LOOKUP[startP];
   
   const durationMin = session.type === CourseType.LT ? 45 : 60;
   
@@ -68,7 +70,7 @@ const isSessionCurrent = (session: CourseSession, sessionDateStr: string): boole
   const startM = parseInt(startStr.substring(2, 4));
   const startTotalM = startH * 60 + startM;
 
-  const lastStartStr = SLOT_TIMES[endP] || startStr;
+  const lastStartStr = SLOT_TIMES_LOOKUP[endP] || startStr;
   const lastStartH = parseInt(lastStartStr.substring(0, 2));
   const lastStartM = parseInt(lastStartStr.substring(2, 4));
   const endTotalM = (lastStartH * 60 + lastStartM) + durationMin;
@@ -88,10 +90,16 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
   weekIdx,
   thresholds,
   allWeeks,
-  overrides
+  overrides,
+  abbreviations
 }) => {
   const [filters, setFilters] = useState<FilterState>({ search: '', className: '', room: '', teacher: '', sessionTime: '' });
   const [viewMode, setViewMode] = useState<'horizontal' | 'vertical'>('horizontal');
+  
+  // Export Modal State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [availableTeachers, setAvailableTeachers] = useState<string[]>([]);
+  const [selectedTeachers, setSelectedTeachers] = useState<Set<string>>(new Set());
 
   const getDayDateString = (dayIndex: number) => {
     try {
@@ -129,37 +137,88 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
     };
   }, [allWeeks]);
 
-  const exportToICS = () => {
+  // Handle Opening Export Modal
+  const openExportModal = () => {
+    // Collect teachers for the current week
+    const teachers = new Set<string>();
+    DAYS_OF_WEEK.forEach((dayName) => {
+      const day = week.days[dayName];
+      [...day.morning, ...day.afternoon, ...day.evening].forEach(s => {
+        teachers.add(s.teacher);
+      });
+    });
+    const sortedTeachers = Array.from(teachers).sort();
+    setAvailableTeachers(sortedTeachers);
+    setSelectedTeachers(new Set(sortedTeachers)); // Default select all
+    setIsExportModalOpen(true);
+  };
+
+  const toggleTeacherSelection = (teacher: string) => {
+    const newSet = new Set(selectedTeachers);
+    if (newSet.has(teacher)) newSet.delete(teacher);
+    else newSet.add(teacher);
+    setSelectedTeachers(newSet);
+  };
+
+  const toggleAllTeachers = () => {
+    if (selectedTeachers.size === availableTeachers.length) {
+      setSelectedTeachers(new Set());
+    } else {
+      setSelectedTeachers(new Set(availableTeachers));
+    }
+  };
+
+  const confirmExportICS = () => {
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//TdyPhan//Timetable//VN\nCALSCALE:GREGORIAN\n";
+    
     DAYS_OF_WEEK.forEach((dayName, idx) => {
       const day = week.days[dayName];
       const sessions = [...day.morning, ...day.afternoon, ...day.evening];
-      const dateStr = getDayDateString(idx);
+      const dateStr = getDayDateString(idx); // dd/mm/yyyy
+      if(!dateStr) return;
+
       const [d, m, y] = dateStr.split('/');
+      
       sessions.forEach(s => {
+        // Filter by selected teacher
+        if (!selectedTeachers.has(s.teacher)) return;
+
         const [startP, endP] = s.timeSlot.split('-').map(Number);
-        const currentType = overrides[s.courseCode] || s.type;
-        const durationMin = currentType === CourseType.LT ? 45 : 60;
-        const startTimeStr = SLOT_TIMES[startP] || "000000";
-        const lastSlotStartStr = SLOT_TIMES[endP] || startTimeStr;
-        const hh = parseInt(lastSlotStartStr.substring(0, 2));
-        const mm = parseInt(lastSlotStartStr.substring(2, 4));
-        let endH = hh;
-        let endM = mm + durationMin;
-        if (endM >= 60) { endH += Math.floor(endM / 60); endM = endM % 60; }
+        
+        // Use PERIOD_TIMES for exact start/end
+        const startTimeInfo = PERIOD_TIMES[startP];
+        const endTimeInfo = PERIOD_TIMES[endP];
+
+        if (!startTimeInfo || !endTimeInfo) return;
+
+        const [startH, startM] = startTimeInfo.start;
+        const [endH, endM] = endTimeInfo.end;
+
+        const startHStr = String(startH).padStart(2, '0');
+        const startMStr = String(startM).padStart(2, '0');
         const endHStr = String(endH).padStart(2, '0');
         const endMStr = String(endM).padStart(2, '0');
-        const endTimeStr = `${endHStr}${endMStr}00`;
+
+        const currentType = overrides[s.courseCode] || s.type;
+        
+        // Use abbreviation for Export if available
+        const displayName = abbreviations[s.courseName] || s.courseName;
+
+        // Correct Newline formatting for ICS Description: literal '\n'
+        const description = `GV: ${s.teacher}\\nLớp: ${s.className}\\nTiết: ${s.timeSlot} (${currentType})\\nNhóm: ${s.group}\\nPhòng: ${s.room}`;
+
         icsContent += "BEGIN:VEVENT\n";
-        icsContent += `SUMMARY:${s.courseName} (${currentType})\n`;
+        icsContent += `SUMMARY:${displayName} (${currentType})\n`;
         icsContent += `LOCATION:${s.room}\n`;
-        icsContent += `DESCRIPTION:GV: ${s.teacher}\\nLớp: ${s.className}\\nTiết: ${s.timeSlot}\\nNhóm: ${s.group}\n`;
-        icsContent += `DTSTART:${y}${m}${d}T${startTimeStr}\n`;
-        icsContent += `DTEND:${y}${m}${d}T${endTimeStr}\n`;
+        icsContent += `DESCRIPTION:${description}\n`;
+        icsContent += `DTSTART:${y}${m}${d}T${startHStr}${startMStr}00\n`;
+        icsContent += `DTEND:${y}${m}${d}T${endHStr}${endMStr}00\n`;
         icsContent += "END:VEVENT\n";
       });
     });
+
     icsContent += "END:VCALENDAR";
+    
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
@@ -167,6 +226,8 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    setIsExportModalOpen(false);
   };
 
   const filterSession = (s: CourseSession) => {
@@ -189,6 +250,9 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
           const isCurrent = isSessionCurrent(session, dateStr);
           // Hide teacher tag if filtered by teacher
           const showTeacher = !filters.teacher; 
+          
+          // Use abbreviation if available
+          const displayName = abbreviations[session.courseName] || session.courseName;
 
           return (
             <div 
@@ -199,8 +263,8 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
               `}
             >
               <div className="flex justify-between items-start gap-1">
-                <p className="text-[11px] font-bold leading-tight mb-1 text-slate-800 dark:text-slate-100">
-                  {session.courseName}
+                <p className="text-[11px] font-bold leading-tight mb-1 text-slate-800 dark:text-slate-100" title={session.courseName}>
+                  {displayName}
                 </p>
                 {session.hasConflict && <AlertCircle size={14} className="text-red-500 flex-shrink-0" />}
                 {isCurrent && <span className="absolute -top-1 -right-1 flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span></span>}
@@ -234,7 +298,72 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
   };
 
   return (
-    <div className="pb-12 max-w-full animate-in fade-in duration-500">
+    <div className="pb-12 max-w-full animate-in fade-in duration-500 relative">
+      
+      {/* EXPORT MODAL */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsExportModalOpen(false)}></div>
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 relative z-10 flex flex-col max-h-[80vh]">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+               <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                 <CalendarPlus size={20} className="text-blue-500"/> Xuất Lịch Google
+               </h3>
+               <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                 <X size={20} />
+               </button>
+            </div>
+            
+            <div className="p-5 overflow-y-auto custom-scrollbar flex-1">
+               <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                 Chọn giảng viên để xuất lịch cho <strong>Tuần {weekIdx + 1}</strong>.
+               </p>
+               
+               <div className="flex justify-between items-center mb-3">
+                  <span className="text-xs font-bold uppercase text-slate-400">Danh sách giảng viên ({availableTeachers.length})</span>
+                  <button onClick={toggleAllTeachers} className="text-xs font-bold text-blue-600 hover:underline">
+                    {selectedTeachers.size === availableTeachers.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                  </button>
+               </div>
+
+               <div className="space-y-2">
+                 {availableTeachers.map(teacher => (
+                   <div 
+                      key={teacher} 
+                      onClick={() => toggleTeacherSelection(teacher)}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                   >
+                      <div className={`flex-shrink-0 ${selectedTeachers.has(teacher) ? 'text-blue-500' : 'text-slate-300'}`}>
+                        {selectedTeachers.has(teacher) ? <CheckSquare size={20} /> : <Square size={20} />}
+                      </div>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{teacher}</span>
+                   </div>
+                 ))}
+                 {availableTeachers.length === 0 && (
+                   <div className="text-center py-8 text-slate-400 text-sm italic">Không có dữ liệu giảng viên trong tuần này.</div>
+                 )}
+               </div>
+            </div>
+
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-b-2xl flex justify-end gap-3">
+               <button 
+                 onClick={() => setIsExportModalOpen(false)}
+                 className="px-4 py-2 text-slate-500 font-bold text-xs rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+               >
+                 Hủy bỏ
+               </button>
+               <button 
+                 onClick={confirmExportICS}
+                 disabled={selectedTeachers.size === 0}
+                 className="px-6 py-2 bg-blue-600 disabled:bg-slate-400 text-white font-bold text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+               >
+                 <Download size={16} /> Xuất file .ics
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Tuần {weekIdx + 1}</h3>
@@ -259,7 +388,7 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
           </button>
 
           <button 
-            onClick={exportToICS}
+            onClick={openExportModal}
             className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors shadow-sm"
           >
             <CalendarPlus size={14} className="text-blue-500" />

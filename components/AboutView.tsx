@@ -11,6 +11,11 @@ const CHANGE_LOG = [
     version: 'v0.012',
     date: '2026-01-16',
     changes: [
+      'Tính năng: Hỗ trợ "Tên môn học viết tắt" (Abbreviations) giúp hiển thị gọn gàng trên màn hình nhỏ và file xuất Google Calendar.',
+      'Tính năng: Tự động đề xuất tên viết tắt thông minh (VD: Chăm sóc sức khỏe cộng đồng -> CSSKCĐ).',
+      'Export: Tính năng xuất Google Calendar (.ics) nâng cao: Chọn GV cần xuất, định dạng giờ chuẩn xác theo quy định, fix lỗi xuống dòng ở mô tả.',
+      'Input: Bổ sung tính năng Paste trực tiếp mã nguồn HTML/JSON vào ứng dụng.',
+      'UI Thống kê: Card "Tổng quan hoạt động" chuyển sang tone màu Cam-Vàng nổi bật.',
       'UI Thống kê: Tối ưu biểu đồ Chi tiết môn học (Sắp xếp giảm dần, thêm đơn vị).',
       'UI Thống kê: Biểu đồ cường độ buổi dạy được làm dày hơn để dễ quan sát.',
       'UI: Loại bỏ khoảng trắng thừa ở các card thống kê.',

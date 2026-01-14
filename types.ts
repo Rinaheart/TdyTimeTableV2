@@ -47,6 +47,7 @@ export interface ScheduleData {
   weeks: WeekSchedule[];
   allCourses: AggregatedCourse[];
   overrides?: Record<string, CourseType>;
+  abbreviations?: Record<string, string>;
 }
 
 export interface AggregatedCourse {

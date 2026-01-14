@@ -25,6 +25,7 @@ const App: React.FC = () => {
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [thresholds, setThresholds] = useState<Thresholds>(DEFAULT_THRESHOLDS);
   const [overrides, setOverrides] = useState<Record<string, CourseType>>({});
+  const [abbreviations, setAbbreviations] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   
@@ -45,6 +46,7 @@ const App: React.FC = () => {
         const parsed: ScheduleData = JSON.parse(saved);
         setData(parsed);
         setOverrides(parsed.overrides || {});
+        setAbbreviations(parsed.abbreviations || {});
         setMetrics(calculateMetrics(parsed));
         // Auto jump to current week on reload
         jumpToCurrentWeek(parsed);
@@ -157,6 +159,7 @@ const App: React.FC = () => {
 
       setData(parsedData);
       setOverrides(parsedData.overrides || {});
+      setAbbreviations(parsedData.abbreviations || {});
       setMetrics(calculateMetrics(parsedData));
       setError(null);
       localStorage.setItem('last_schedule_data', JSON.stringify(parsedData));
@@ -230,6 +233,14 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSaveAbbreviations = (newAbbr: Record<string, string>) => {
+    setAbbreviations(newAbbr);
+    if (data) {
+      const updatedData = { ...data, abbreviations: newAbbr };
+      localStorage.setItem('last_schedule_data', JSON.stringify(updatedData));
+    }
+  };
+
   const handleClickOutside = () => {
     if (window.innerWidth < 1024 && !sidebarCollapsed) {
       setSidebarCollapsed(true);
@@ -289,7 +300,7 @@ const App: React.FC = () => {
       );
     }
 
-    const dataWithOverrides = { ...data, overrides };
+    const dataWithOverrides = { ...data, overrides, abbreviations };
 
     switch (activeTab) {
       case TabType.WEEK:
@@ -306,6 +317,7 @@ const App: React.FC = () => {
             weekIdx={currentWeekIndex}
             thresholds={thresholds}
             overrides={overrides}
+            abbreviations={abbreviations}
           />
         );
       case TabType.OVERVIEW:
@@ -321,6 +333,8 @@ const App: React.FC = () => {
             data={dataWithOverrides}
             overrides={overrides}
             onSaveOverrides={handleSaveOverrides}
+            abbreviations={abbreviations}
+            onSaveAbbreviations={handleSaveAbbreviations}
           />
         );
       case TabType.ABOUT:
