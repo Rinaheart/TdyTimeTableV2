@@ -119,7 +119,7 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onDemoLoad }) => {
         </div>
       </div>
       <div className="bg-slate-50 dark:bg-slate-950 p-3 text-center text-[10px] text-slate-400 border-t border-slate-200 dark:border-slate-800">
-        © 2026 TdyPhan
+        © 2026 TdyPhan | Google AI Studio
       </div>
     </div>
   );

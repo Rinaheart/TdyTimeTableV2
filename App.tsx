@@ -357,7 +357,7 @@ const App: React.FC = () => {
           
           {!data && (
             <div className="p-4 text-center text-[11px] text-slate-400 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-900">
-              © 2026 TdyPhan | Gg AI Studio
+              © 2026 TdyPhan | Google AI Studio
             </div>
           )}
         </main>

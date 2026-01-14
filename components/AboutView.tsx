@@ -117,7 +117,7 @@ const AboutView: React.FC<AboutViewProps> = ({ version }) => {
           Thiết kế đặc biệt cho Giảng viên Khối CĐ - Trường ĐHYD, ĐH Huế.
         </p>
         <p className="text-xs font-bold text-slate-400">
-           © 2026 TdyPhan | Gg AI Studio
+           © 2026 TdyPhan | Google AI Studio
         </p>
         <div className="flex justify-center gap-3 pt-2">
            <a href="mailto:tdyphan@gmail.com" className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-blue-100 transition-colors"><Mail size={18}/></a>
@@ -189,7 +189,7 @@ const AboutView: React.FC<AboutViewProps> = ({ version }) => {
       </div>
 
       <div className="text-center pt-8">
-        <p className="text-[10px] font-medium text-slate-400 tracking-[0.2em]">© 2026 TdyPhan | Gg AI Studio</p>
+        <p className="text-[10px] font-medium text-slate-400 tracking-[0.2em]">© 2026 TdyPhan | Google AI Studio</p>
       </div>
     </div>
   );

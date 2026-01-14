@@ -302,7 +302,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
 
       </div>
       <div className="text-center text-slate-400 text-[10px] mt-8">
-        © 2026 TdyPhan | Gg AI Studio
+        © 2026 TdyPhan | Google AI Studio
       </div>
     </div>
   );

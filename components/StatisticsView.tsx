@@ -386,7 +386,7 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
       </div>
 
       <div className="text-center text-slate-400 text-[10px] mt-12 pt-4 border-t border-slate-100 dark:border-slate-900">
-        © 2026 TdyPhan | Gg AI Studio
+        © 2026 TdyPhan | Google AI Studio
       </div>
     </div>
   );
