@@ -8,6 +8,19 @@ interface AboutViewProps {
 
 const CHANGE_LOG = [
   {
+    version: 'v0.011',
+    date: '2026-01-15',
+    changes: [
+      'Dashboard Thống Kê: Thiết kế lại toàn bộ giao diện (Cards, Grid) theo phong cách hiện đại.',
+      'Logic: Cập nhật cơ chế xác định LT/TH (-LT, -TH, mặc định).',
+      'Logic: Thống kê chỉ tính số liệu cho Giảng viên chính (Lọc GV khác).',
+      'Tính năng: Bảng kê "Các GV cùng tham gia giảng dạy" tách biệt.',
+      'Tính năng: Tự động sinh Cảnh báo (Quá tải, dạy tối, dạy cuối tuần...)',
+      'Tính năng: Tự động sinh Kết luận dựa trên dữ liệu phân tích.',
+      'UI: Thêm Heatmap tuần cao điểm và Treemap phân bố học phần.'
+    ]
+  },
+  {
     version: 'v0.010',
     date: '2026-01-14',
     changes: [
@@ -104,7 +117,7 @@ const AboutView: React.FC<AboutViewProps> = ({ version }) => {
           Thiết kế đặc biệt cho Giảng viên Khối CĐ - Trường ĐHYD, ĐH Huế.
         </p>
         <p className="text-xs font-bold text-slate-400">
-           © 2026 TdyPhan | AI Studio
+           © 2026 TdyPhan | Gg AI Studio
         </p>
         <div className="flex justify-center gap-3 pt-2">
            <a href="mailto:tdyphan@gmail.com" className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-blue-100 transition-colors"><Mail size={18}/></a>
@@ -176,7 +189,7 @@ const AboutView: React.FC<AboutViewProps> = ({ version }) => {
       </div>
 
       <div className="text-center pt-8">
-        <p className="text-[10px] font-medium text-slate-400 tracking-[0.2em]">© 2026 TdyPhan | AI Studio</p>
+        <p className="text-[10px] font-medium text-slate-400 tracking-[0.2em]">© 2026 TdyPhan | Gg AI Studio</p>
       </div>
     </div>
   );

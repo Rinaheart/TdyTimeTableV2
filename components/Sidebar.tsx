@@ -20,11 +20,11 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onReset, collapsed, toggleCollapse }) => {
   const menuItems = [
-    { id: TabType.WEEK, label: 'Lịch Tuần', icon: Calendar },
-    { id: TabType.OVERVIEW, label: 'Lịch Học Kỳ', icon: LayoutDashboard },
-    { id: TabType.STATS, label: 'Thống Kê', icon: BarChart3 },
-    { id: TabType.SETTINGS, label: 'Cài Đặt', icon: SettingsIcon },
-    { id: TabType.ABOUT, label: 'Thông Tin', icon: Info },
+    { id: TabType.WEEK, label: 'Lịch tuần', icon: Calendar },
+    { id: TabType.OVERVIEW, label: 'Lịch học kỳ', icon: LayoutDashboard },
+    { id: TabType.STATS, label: 'Phân tích giảng dạy', icon: BarChart3 },
+    { id: TabType.SETTINGS, label: 'Cấu hình', icon: SettingsIcon },
+    { id: TabType.ABOUT, label: 'Thông tin', icon: Info },
   ];
 
   return (
@@ -68,10 +68,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onReset, coll
         <button 
           onClick={onReset}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors ${collapsed ? 'lg:justify-center' : ''}`}
-          title={collapsed ? "Đổi file khác" : ''}
+          title={collapsed ? "Tải dữ liệu" : ''}
         >
           <LogOut size={20} className="flex-shrink-0" />
-          <span className={`${collapsed ? 'lg:hidden' : 'block'}`}>Đổi file khác</span>
+          <span className={`${collapsed ? 'lg:hidden' : 'block'}`}>Tải dữ liệu</span>
         </button>
       </div>
     </aside>

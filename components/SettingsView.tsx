@@ -1,7 +1,11 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Thresholds, ScheduleData, CourseType } from '../types';
-import { Shield, AlertTriangle, Save, RefreshCw, Info, FileJson, FileSpreadsheet, ChevronUp, ChevronDown, ListChecks, Check } from 'lucide-react';
+import { 
+  Shield, AlertTriangle, Save, RefreshCw, 
+  FileJson, FileSpreadsheet, ChevronUp, ChevronDown, 
+  ListChecks, Check, Download, BellRing 
+} from 'lucide-react';
 import { DEFAULT_THRESHOLDS } from '../constants';
 
 interface SettingsViewProps {
@@ -20,6 +24,15 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
   const [tempOverrides, setTempOverrides] = useState<Record<string, CourseType>>(overrides);
   const [sortField, setSortField] = useState<SortField>('code');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const sortedCourses = useMemo(() => {
     return [...data.allCourses].sort((a, b) => {
@@ -41,6 +54,22 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
     const newOverrides = { ...tempOverrides };
     data.allCourses.forEach(c => { newOverrides[c.code] = type; });
     setTempOverrides(newOverrides);
+  };
+
+  const handleSaveOverrides = () => {
+    onSaveOverrides(tempOverrides);
+    setToast({ message: "Đã lưu tùy chỉnh giảng dạy thành công!", type: "success" });
+  };
+
+  const handleSaveThresholds = () => {
+    onSave(tempThresholds);
+    setToast({ message: "Đã lưu ngưỡng cảnh báo thành công!", type: "success" });
+  };
+
+  const handleResetThresholds = () => {
+    setTempThresholds(DEFAULT_THRESHOLDS);
+    // User must click save to apply, so we just reset the form state
+    setToast({ message: "Đã khôi phục mặc định (Hãy bấm Lưu để áp dụng)", type: "success" });
   };
 
   const exportCSV = () => {
@@ -73,12 +102,27 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in zoom-in duration-300 pb-20">
-      {/* Tùy chỉnh LT/TH */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+    <div className="max-w-5xl mx-auto space-y-8 animate-in zoom-in duration-300 pb-20 relative">
+      
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-20 right-4 z-[100] animate-in slide-in-from-right-10 fade-in duration-300">
+          <div className="bg-slate-800 dark:bg-white text-white dark:text-slate-900 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+            <div className="bg-green-500 rounded-full p-1 text-white">
+              <Check size={14} strokeWidth={3} />
+            </div>
+            <span className="text-xs font-bold">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* CARD 1: Tùy chỉnh hình thức giảng dạy */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">Tùy chỉnh hình thức giảng dạy</h3>
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <ListChecks size={20} className="text-blue-600" /> Tùy chỉnh hình thức giảng dạy
+            </h3>
             <p className="text-xs text-slate-500 mt-1">Gán LT (45p) hoặc TH (60p) cho từng nhóm lớp.</p>
           </div>
           <div className="flex items-center gap-2">
@@ -97,7 +141,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
           </div>
         </div>
         
-        <div className="overflow-x-auto custom-scrollbar max-h-[500px]">
+        <div className="overflow-x-auto custom-scrollbar max-h-[400px]">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 z-10">
               <tr>
@@ -159,52 +203,106 @@ const SettingsView: React.FC<SettingsViewProps> = ({ thresholds, onSave, data, o
           </table>
         </div>
         
-        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 flex justify-center border-t border-slate-100 dark:border-slate-800">
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 flex justify-end border-t border-slate-100 dark:border-slate-800">
            <button 
-             onClick={() => { onSaveOverrides(tempOverrides); alert("Đã lưu cấu hình!"); }}
-             className="px-12 py-3 bg-slate-900 dark:bg-blue-600 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+             onClick={handleSaveOverrides}
+             className="px-6 py-2.5 bg-blue-600 text-white text-xs font-bold rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2"
            >
-             <Save size={18} /> Lưu cấu hình
+             <Save size={16} /> Lưu Tùy chỉnh
            </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4"><Shield size={18} className="text-blue-500" /> Ngưỡng cảnh báo Ngày</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1">Cảnh báo (Tiết)</label>
-              <input type="number" value={tempThresholds.daily.warning} onChange={e => setTempThresholds({...tempThresholds, daily: {...tempThresholds.daily, warning: Number(e.target.value)}})} className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-bold" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* CARD 2: Ngưỡng cảnh báo */}
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <BellRing size={20} className="text-amber-500" /> Ngưỡng cảnh báo
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">Cấu hình giới hạn tiết dạy để hệ thống cảnh báo quá tải.</p>
+          </div>
+          
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 flex-1">
+            {/* Daily */}
+            <div className="space-y-4">
+               <div className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+                 <Shield size={16} className="text-blue-500"/> Theo Ngày
+               </div>
+               <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[9px] text-slate-400 uppercase font-bold mb-1">Cảnh báo</label>
+                    <input type="number" value={tempThresholds.daily.warning} onChange={e => setTempThresholds({...tempThresholds, daily: {...tempThresholds.daily, warning: Number(e.target.value)}})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-bold text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-slate-400 uppercase font-bold mb-1">Nguy hiểm</label>
+                    <input type="number" value={tempThresholds.daily.danger} onChange={e => setTempThresholds({...tempThresholds, daily: {...tempThresholds.daily, danger: Number(e.target.value)}})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-bold text-sm" />
+                  </div>
+               </div>
             </div>
-            <div>
-              <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1">Nguy hiểm (Tiết)</label>
-              <input type="number" value={tempThresholds.daily.danger} onChange={e => setTempThresholds({...tempThresholds, daily: {...tempThresholds.daily, danger: Number(e.target.value)}})} className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-bold" />
+            {/* Weekly */}
+            <div className="space-y-4">
+               <div className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+                 <AlertTriangle size={16} className="text-orange-500"/> Theo Tuần
+               </div>
+               <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[9px] text-slate-400 uppercase font-bold mb-1">Cảnh báo</label>
+                    <input type="number" value={tempThresholds.weekly.warning} onChange={e => setTempThresholds({...tempThresholds, weekly: {...tempThresholds.weekly, warning: Number(e.target.value)}})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-bold text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-slate-400 uppercase font-bold mb-1">Nguy hiểm</label>
+                    <input type="number" value={tempThresholds.weekly.danger} onChange={e => setTempThresholds({...tempThresholds, weekly: {...tempThresholds.weekly, danger: Number(e.target.value)}})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-bold text-sm" />
+                  </div>
+               </div>
             </div>
           </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4"><AlertTriangle size={18} className="text-amber-500" /> Ngưỡng cảnh báo Tuần</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1">Cảnh báo (Tiết)</label>
-              <input type="number" value={tempThresholds.weekly.warning} onChange={e => setTempThresholds({...tempThresholds, weekly: {...tempThresholds.weekly, warning: Number(e.target.value)}})} className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-bold" />
-            </div>
-            <div>
-              <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1">Nguy hiểm (Tiết)</label>
-              <input type="number" value={tempThresholds.weekly.danger} onChange={e => setTempThresholds({...tempThresholds, weekly: {...tempThresholds.weekly, danger: Number(e.target.value)}})} className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-bold" />
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="flex justify-between items-center p-6 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
-         <button onClick={() => { onSave(tempThresholds); alert("Đã lưu ngưỡng cảnh báo!"); }} className="px-8 py-3 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2 transition-transform active:scale-95"><Save size={16}/> Lưu thay đổi</button>
-         <div className="flex gap-4">
-           <button onClick={exportCSV} className="text-xs font-bold text-emerald-600 flex items-center gap-2 hover:underline"><FileSpreadsheet size={16}/> Excel</button>
-           <button onClick={exportBackup} className="text-xs font-bold text-blue-600 flex items-center gap-2 hover:underline"><FileJson size={16}/> Backup</button>
-           <button onClick={() => setTempThresholds(DEFAULT_THRESHOLDS)} className="text-xs font-bold text-slate-400 flex items-center gap-2 hover:text-slate-600"><RefreshCw size={16}/> Reset</button>
-         </div>
+          <div className="p-4 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+             <button 
+               onClick={handleResetThresholds} 
+               className="px-4 py-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 text-xs font-bold rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors flex items-center gap-2"
+             >
+               <RefreshCw size={14} /> Reset
+             </button>
+             <button 
+               onClick={handleSaveThresholds} 
+               className="px-6 py-2 bg-slate-900 dark:bg-white dark:text-slate-900 text-white text-xs font-bold rounded-xl shadow hover:shadow-lg active:scale-95 transition-all flex items-center gap-2"
+             >
+               <Save size={14} /> Lưu ngưỡng cảnh báo
+             </button>
+          </div>
+        </div>
+
+        {/* CARD 3: Xuất dữ liệu */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <Download size={20} className="text-emerald-500" /> Xuất dữ liệu
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">Tải xuống dữ liệu hiện tại để lưu trữ hoặc xử lý.</p>
+          </div>
+          
+          <div className="p-6 flex flex-col gap-3 flex-1 justify-center">
+            <button 
+              onClick={exportCSV} 
+              className="w-full py-3 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/20 transition-colors flex items-center justify-center gap-2"
+            >
+              <FileSpreadsheet size={18} /> Xuất Excel (.csv)
+            </button>
+            <button 
+              onClick={exportBackup} 
+              className="w-full py-3 bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-2"
+            >
+              <FileJson size={18} /> Backup (.json)
+            </button>
+          </div>
+        </div>
+
+      </div>
+      <div className="text-center text-slate-400 text-[10px] mt-8">
+        © 2026 TdyPhan | Gg AI Studio
       </div>
     </div>
   );

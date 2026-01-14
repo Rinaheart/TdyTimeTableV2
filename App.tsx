@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { ScheduleData, TabType, Metrics, Thresholds, CourseType, CourseSession } from './types';
 import { DEFAULT_THRESHOLDS } from './constants';
 import { parseScheduleHTML } from './services/parser';
@@ -16,7 +16,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import UploadZone from './components/UploadZone';
 
-const VERSION = '0.010';
+const VERSION = '0.011';
 
 const App: React.FC = () => {
   const [data, setData] = useState<ScheduleData | null>(null);
@@ -27,6 +27,11 @@ const App: React.FC = () => {
   const [overrides, setOverrides] = useState<Record<string, CourseType>>({});
   const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
+  
+  // Loading & Transition States
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   
   // Default expanded on desktop (false), collapsed on mobile (true)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 1024 : true);
@@ -40,6 +45,8 @@ const App: React.FC = () => {
         setData(parsed);
         setOverrides(parsed.overrides || {});
         setMetrics(calculateMetrics(parsed));
+        // Auto jump to current week on reload
+        jumpToCurrentWeek(parsed);
       } catch (e) {
         console.error("Failed to load saved data");
       }
@@ -64,34 +71,143 @@ const App: React.FC = () => {
     else document.documentElement.classList.remove('dark');
   };
 
+  const parseDateFromRange = (dateRange: string, position: 'start' | 'end'): Date | null => {
+    try {
+      // Format: "Từ ngày: 12/01/2026 đến ngày 18/01/2026"
+      const matches = dateRange.match(/(\d{2})\/(\d{2})\/(\d{4})/g);
+      if (!matches || matches.length < 2) return null;
+      
+      const dateStr = position === 'start' ? matches[0] : matches[1];
+      const [d, m, y] = dateStr.split('/').map(Number);
+      return new Date(y, m - 1, d);
+    } catch {
+      return null;
+    }
+  };
+
+  const jumpToCurrentWeek = (scheduleData: ScheduleData) => {
+    if (!scheduleData.weeks.length) return;
+    
+    const now = new Date();
+    // Reset hours for accurate date comparison
+    now.setHours(0, 0, 0, 0);
+
+    const weekIdx = scheduleData.weeks.findIndex(w => {
+      const start = parseDateFromRange(w.dateRange, 'start');
+      const end = parseDateFromRange(w.dateRange, 'end');
+      if (start && end) {
+        return now >= start && now <= end;
+      }
+      return false;
+    });
+
+    if (weekIdx !== -1) {
+      setCurrentWeekIndex(weekIdx);
+    } else {
+      // Determine if past or future
+      const firstWeekStart = parseDateFromRange(scheduleData.weeks[0].dateRange, 'start');
+      if (firstWeekStart && now < firstWeekStart) {
+        setCurrentWeekIndex(0); // Future -> First week
+      } else {
+        setCurrentWeekIndex(scheduleData.weeks.length - 1); // Past -> Last week
+      }
+    }
+  };
+
+  const processLoadedData = (parsedData: ScheduleData) => {
+    setIsProcessing(true);
+    
+    // Simulate processing delay for smoothness
+    setTimeout(() => {
+      // Determine context for toast message
+      const now = new Date();
+      now.setHours(0,0,0,0);
+      
+      let message = "";
+      let targetWeekIdx = 0;
+
+      const firstWeekStart = parseDateFromRange(parsedData.weeks[0].dateRange, 'start');
+      const lastWeekEnd = parseDateFromRange(parsedData.weeks[parsedData.weeks.length - 1].dateRange, 'end');
+
+      if (firstWeekStart && lastWeekEnd) {
+        if (now > lastWeekEnd) {
+           // Case 2: Old Calendar
+           message = `✅ Tải lịch thành công! Tuy nhiên, đây là dữ liệu của kỳ trước (Kết thúc ngày ${lastWeekEnd.toLocaleDateString('vi-VN')}). Đang hiển thị tuần cuối cùng.`;
+           targetWeekIdx = parsedData.weeks.length - 1;
+        } else if (now < firstWeekStart) {
+           // Case 3: Future Calendar
+           message = `✅ Đã tải lịch mới! Học kỳ chưa bắt đầu. Đang hiển thị tuần đầu tiên của lịch giảng (${firstWeekStart.toLocaleDateString('vi-VN')}).`;
+           targetWeekIdx = 0;
+        } else {
+           // Case 1: Current Calendar
+           // Find current week
+           const currentWIdx = parsedData.weeks.findIndex(w => {
+             const s = parseDateFromRange(w.dateRange, 'start');
+             const e = parseDateFromRange(w.dateRange, 'end');
+             return s && e && now >= s && now <= e;
+           });
+           const actualIdx = currentWIdx !== -1 ? currentWIdx : 0;
+           targetWeekIdx = actualIdx;
+           const currentWeekRange = parsedData.weeks[actualIdx].dateRange.replace('Từ ngày: ', '').replace('đến ngày ', '- ');
+           message = `✅ Tải lịch thành công! [${parsedData.metadata.semester} - ${parsedData.metadata.academicYear}]. Đang chuyển đến tuần hiện tại (Tuần ${parsedData.weeks[actualIdx].weekNumber}, ${currentWeekRange}).`;
+        }
+      } else {
+        message = "✅ Tải lịch thành công!";
+      }
+
+      setData(parsedData);
+      setOverrides(parsedData.overrides || {});
+      setMetrics(calculateMetrics(parsedData));
+      setError(null);
+      localStorage.setItem('last_schedule_data', JSON.stringify(parsedData));
+      
+      setCurrentWeekIndex(targetWeekIdx);
+      setToastMessage(message);
+      setIsProcessing(false);
+      setShowSuccess(true);
+      
+      // Hide Success Screen after 3s
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+
+    }, 800);
+  };
+
   const handleFileUpload = useCallback((content: string) => {
     try {
+      if (!content || content.trim().length === 0) {
+        throw new Error("⚠️ File không có dữ liệu! Không tìm thấy thông tin giảng dạy trong file vừa tải lên.");
+      }
+
       // Check if it's JSON
       if (content.trim().startsWith('{')) {
-        const parsedJson = JSON.parse(content) as ScheduleData;
-        if (parsedJson.weeks && parsedJson.metadata) {
-          setData(parsedJson);
-          setOverrides(parsedJson.overrides || {});
-          setMetrics(calculateMetrics(parsedJson));
-          setError(null);
-          localStorage.setItem('last_schedule_data', JSON.stringify(parsedJson));
-          return;
+        try {
+          const parsedJson = JSON.parse(content) as ScheduleData;
+          if (parsedJson.weeks && parsedJson.metadata) {
+            processLoadedData(parsedJson);
+            return;
+          } else {
+             throw new Error("⚠️ Cấu trúc không khớp! File không đúng mẫu quy định.");
+          }
+        } catch {
+             throw new Error("⚠️ Cấu trúc không khớp! File JSON bị lỗi.");
         }
       }
 
       // Default to HTML
-      const parsedData = parseScheduleHTML(content);
-      if (parsedData && parsedData.weeks.length > 0) {
-        setData(parsedData);
-        setOverrides({});
-        setMetrics(calculateMetrics(parsedData));
-        setError(null);
-        localStorage.setItem('last_schedule_data', JSON.stringify(parsedData));
-      } else {
-        throw new Error("Dữ liệu không hợp lệ.");
+      try {
+        const parsedData = parseScheduleHTML(content);
+        if (parsedData && parsedData.weeks.length > 0) {
+          processLoadedData(parsedData);
+        } else {
+          throw new Error("⚠️ File không có dữ liệu! Không tìm thấy thông tin giảng dạy.");
+        }
+      } catch (e: any) {
+        throw new Error(e.message || "❌ Lỗi định dạng! Hệ thống chỉ hỗ trợ file .HTML hoặc .JSON. Vui lòng kiểm tra lại.");
       }
     } catch (err: any) {
-      setError(err.message || "File không đúng định dạng hoặc thiếu cấu trúc HTML hợp lệ.");
+      setError(err.message);
     }
   }, []);
 
@@ -99,11 +215,7 @@ const App: React.FC = () => {
     const validCodes = ['TdyHK1', 'Tdy12345'];
     if (validCodes.includes(code)) {
       const demoData = requireDemoData(); 
-      setData(demoData);
-      setOverrides({});
-      setMetrics(calculateMetrics(demoData));
-      setError(null);
-      localStorage.setItem('last_schedule_data', JSON.stringify(demoData));
+      processLoadedData(demoData);
     } else {
       alert("Mã bí mật không chính xác.");
     }
@@ -117,12 +229,32 @@ const App: React.FC = () => {
     }
   };
 
-  // Close sidebar on mobile when clicking outside
   const handleClickOutside = () => {
     if (window.innerWidth < 1024 && !sidebarCollapsed) {
       setSidebarCollapsed(true);
     }
   };
+
+  // SUCCESS SCREEN
+  if (showSuccess) {
+     return (
+       <div className="fixed inset-0 z-50 bg-white dark:bg-slate-950 flex flex-col items-center justify-center animate-in fade-in duration-300">
+          <div className="text-center space-y-6">
+             <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mx-auto animate-bounce">
+                <CheckCircle2 size={48} strokeWidth={3} />
+             </div>
+             <div className="max-w-md px-6">
+                <p className="text-lg font-bold text-slate-800 dark:text-white leading-relaxed">
+                  {toastMessage?.split('! ')[0]}!
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                  {toastMessage?.split('! ')[1]}
+                </p>
+             </div>
+          </div>
+       </div>
+     );
+  }
 
   const renderContent = () => {
     if (!data || !metrics) {
@@ -149,6 +281,7 @@ const App: React.FC = () => {
             allWeeks={data.weeks}
             onNext={() => setCurrentWeekIndex(prev => Math.min(prev + 1, data.weeks.length - 1))}
             onPrev={() => setCurrentWeekIndex(prev => Math.max(prev - 1, 0))}
+            onCurrent={() => jumpToCurrentWeek(data)}
             isFirst={currentWeekIndex === 0}
             isLast={currentWeekIndex === data.weeks.length - 1}
             totalWeeks={data.weeks.length}
@@ -201,6 +334,7 @@ const App: React.FC = () => {
             collapsed={sidebarCollapsed}
             toggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
             onReset={() => {
+              // Fade out effect manually or just reset
               setData(null);
               setOverrides({});
               localStorage.removeItem('last_schedule_data');
@@ -223,7 +357,7 @@ const App: React.FC = () => {
           
           {!data && (
             <div className="p-4 text-center text-[11px] text-slate-400 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-900">
-              © 2026 TdyPhan
+              © 2026 TdyPhan | Gg AI Studio
             </div>
           )}
         </main>

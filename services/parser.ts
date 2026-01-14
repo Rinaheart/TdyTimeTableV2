@@ -119,6 +119,12 @@ const processSlotRow = (row: Element, session: 'morning' | 'afternoon' | 'evenin
       const periodEnd = slotMatch ? parseInt(slotMatch[2]) : 0;
       const periods = (periodEnd - periodStart) + 1;
 
+      // New Type Logic: -LT -> LT, -TH -> TH, else -> LT
+      let type = CourseType.LT;
+      if (groupCode.includes('-LT')) type = CourseType.LT;
+      else if (groupCode.includes('-TH')) type = CourseType.TH;
+      else type = CourseType.LT; // Default
+
       const sessionObj: CourseSession = {
         courseCode: groupCode,
         courseName,
@@ -129,7 +135,7 @@ const processSlotRow = (row: Element, session: 'morning' | 'afternoon' | 'evenin
         room: roomMatch ? roomMatch[1].trim() : "Unknown",
         teacher: teacherMatch ? teacherMatch[1].trim() : "Chưa rõ",
         actualHours: 0,
-        type: groupCode.includes('-LT') ? CourseType.LT : CourseType.TH,
+        type: type,
         dayOfWeek: dayName,
         sessionTime: session
       };

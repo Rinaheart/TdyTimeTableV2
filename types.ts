@@ -67,7 +67,7 @@ export interface Metrics {
   totalGroups: number;
   totalRooms: number;
   busiestDay: { day: string; hours: number };
-  busiestWeek: { week: number; hours: number };
+  busiestWeek: { week: number; hours: number; range: string };
   hoursByDay: { [key: string]: number };
   hoursByWeek: { [key: number]: number };
   typeDistribution: { [key in CourseType]: number };
@@ -77,6 +77,12 @@ export interface Metrics {
     evening: { hours: number; sessions: number };
   };
   topRooms: { room: string; periods: number }[];
+  classDistribution: { className: string; periods: number }[];
+  coTeachers: { name: string; periods: number; subjects: string[] }[];
+  warnings: string[];
+  conclusions: string[];
+  peakWeekHeatmap: { day: string; count: number }[];
+  peakWeekShiftStats: { morning: number; afternoon: number; evening: number };
 }
 
 export enum TabType {

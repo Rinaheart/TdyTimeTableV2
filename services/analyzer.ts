@@ -1,6 +1,6 @@
 
 import { ScheduleData, Metrics, CourseType, DaySchedule, CourseSession } from '../types';
-import { DAYS_OF_WEEK } from '../constants';
+import { DAYS_OF_WEEK, VI_DAYS_OF_WEEK } from '../constants';
 
 export const calculateMetrics = (data: ScheduleData): Metrics => {
   let totalHours = 0;
@@ -9,6 +9,8 @@ export const calculateMetrics = (data: ScheduleData): Metrics => {
   const hoursByWeek: { [key: number]: number } = {};
   const typeDistribution = { [CourseType.LT]: 0, [CourseType.TH]: 0 };
   const roomMetrics: { [key: string]: number } = {};
+  const classMetrics: { [key: string]: number } = {};
+  const coTeacherMap = new Map<string, { periods: number, subjects: Set<string> }>();
   
   const shiftStats = {
     morning: { hours: 0, sessions: 0 },
@@ -16,15 +18,27 @@ export const calculateMetrics = (data: ScheduleData): Metrics => {
     evening: { hours: 0, sessions: 0 }
   };
 
+  const warnings: string[] = [];
+  
+  // Normalize main teacher name for comparison
+  const mainTeacherName = data.metadata.teacher.trim().toLowerCase();
+
   DAYS_OF_WEEK.forEach(d => hoursByDay[d] = 0);
 
-  // First pass: Detect Conflicts
+  // Helper to check if session belongs to main teacher
+  const isMainTeacher = (t: string) => {
+    if (!t || t === "Chưa rõ" || t === "Unknown") return true;
+    return t.toLowerCase().includes(mainTeacherName) || mainTeacherName.includes(t.toLowerCase());
+  };
+
+  // First pass: Detect Conflicts & Filter Co-teachers
   data.weeks.forEach(w => {
     Object.values(w.days).forEach(day => {
       const parts = day as DaySchedule;
       const allDaySessions = [...parts.morning, ...parts.afternoon, ...parts.evening];
       
       allDaySessions.forEach(s1 => {
+        // Detect conflicts for all (just visual)
         const conflicts = allDaySessions.filter(s2 => 
           s1 !== s2 && 
           s1.teacher === s2.teacher && 
@@ -38,41 +52,81 @@ export const calculateMetrics = (data: ScheduleData): Metrics => {
     });
   });
 
+  let busiestWeek = { week: 1, hours: 0, range: '' };
+  let peakWeekHeatmap: { day: string, count: number }[] = [];
+  let peakWeekShiftStats = { morning: 0, afternoon: 0, evening: 0 };
+
+  // Second pass: Calculate Metrics for Main Teacher ONLY
   data.weeks.forEach(w => {
     let weekTotal = 0;
+    
+    // Temp storage for peak week calculation
+    const currentWeekHeatmap: Record<string, number> = {};
+    DAYS_OF_WEEK.forEach(d => currentWeekHeatmap[d] = 0);
+    const currentWeekShifts = { morning: 0, afternoon: 0, evening: 0 };
+
     Object.entries(w.days).forEach(([day, sessions]) => {
       const parts = sessions as DaySchedule;
       
       const processPart = (part: CourseSession[], shift: 'morning' | 'afternoon' | 'evening') => {
-        if (part.length > 0) {
-          shiftStats[shift].sessions += part.length;
-          totalSessions += part.length;
-          part.forEach(s => {
-            shiftStats[shift].hours += s.periodCount;
-            typeDistribution[s.type] += s.periodCount;
-            roomMetrics[s.room] = (roomMetrics[s.room] || 0) + s.periodCount;
-            totalHours += s.periodCount;
-            hoursByDay[day] += s.periodCount;
-            weekTotal += s.periodCount;
-          });
-        }
+        part.forEach(s => {
+          // If not main teacher, track co-teacher and skip main stats
+          if (!isMainTeacher(s.teacher)) {
+             if (!coTeacherMap.has(s.teacher)) {
+                coTeacherMap.set(s.teacher, { periods: 0, subjects: new Set() });
+             }
+             const co = coTeacherMap.get(s.teacher)!;
+             co.periods += s.periodCount;
+             co.subjects.add(s.courseName);
+             return;
+          }
+
+          // Main Teacher Stats
+          shiftStats[shift].sessions += 1;
+          shiftStats[shift].hours += s.periodCount;
+          totalSessions += 1;
+          
+          typeDistribution[s.type] += s.periodCount;
+          roomMetrics[s.room] = (roomMetrics[s.room] || 0) + s.periodCount;
+          
+          if (s.className) {
+            classMetrics[s.className] = (classMetrics[s.className] || 0) + s.periodCount;
+          }
+
+          totalHours += s.periodCount;
+          hoursByDay[day] += s.periodCount;
+          weekTotal += s.periodCount;
+
+          // For Peak Week Logic
+          currentWeekHeatmap[day] += s.periodCount;
+          currentWeekShifts[shift] += 1;
+
+          // Warnings Check
+          if (s.sessionTime === 'evening') warnings.push('EVENING_CLASS');
+          if (['Saturday', 'Sunday'].includes(s.dayOfWeek)) warnings.push('WEEKEND_CLASS');
+          if (s.periodCount === 1) warnings.push('SINGLE_PERIOD');
+        });
       };
 
       processPart(parts.morning, 'morning');
       processPart(parts.afternoon, 'afternoon');
       processPart(parts.evening, 'evening');
     });
+
     hoursByWeek[w.weekNumber] = weekTotal;
+    if (weekTotal > 25) warnings.push(`OVERLOAD_WEEK_${w.weekNumber}`);
+
+    // Determine Peak Week
+    if (weekTotal > busiestWeek.hours) {
+      busiestWeek = { week: w.weekNumber, hours: weekTotal, range: w.dateRange };
+      peakWeekHeatmap = Object.entries(currentWeekHeatmap).map(([d, c]) => ({ day: d, count: c }));
+      peakWeekShiftStats = currentWeekShifts;
+    }
   });
 
   let busiestDay = { day: 'Monday', hours: 0 };
   Object.entries(hoursByDay).forEach(([day, hours]) => {
     if (hours > busiestDay.hours) busiestDay = { day, hours };
-  });
-
-  let busiestWeek = { week: 1, hours: 0 };
-  Object.entries(hoursByWeek).forEach(([week, hours]) => {
-    if (hours > busiestWeek.hours) busiestWeek = { week: parseInt(week), hours };
   });
 
   const uniqueSubjects = new Set(data.allCourses.map(c => {
@@ -84,6 +138,55 @@ export const calculateMetrics = (data: ScheduleData): Metrics => {
     .map(([room, periods]) => ({ room, periods }))
     .sort((a, b) => b.periods - a.periods)
     .slice(0, 10);
+
+  const classDistribution = Object.entries(classMetrics)
+    .map(([className, periods]) => ({ className, periods }))
+    .sort((a, b) => b.periods - a.periods);
+
+  const coTeachers = Array.from(coTeacherMap.entries()).map(([name, data]) => ({
+    name,
+    periods: data.periods,
+    subjects: Array.from(data.subjects)
+  }));
+
+  // Process Warnings into unique strings
+  const distinctWarnings: string[] = [];
+  const overloadWeeks = warnings.filter(w => w.startsWith('OVERLOAD')).length;
+  if (overloadWeeks > 0) distinctWarnings.push(`${overloadWeeks}/${data.weeks.length} tuần > 25 tiết (ngưỡng cảnh báo)`);
+  
+  const eveningCount = warnings.filter(w => w === 'EVENING_CLASS').length;
+  if (eveningCount > 0) distinctWarnings.push(`${eveningCount} buổi dạy tối`);
+
+  const weekendCount = warnings.filter(w => w === 'WEEKEND_CLASS').length;
+  if (weekendCount > 0) distinctWarnings.push(`${weekendCount} buổi dạy cuối tuần (T7, CN)`);
+
+  const singlePeriodCount = warnings.filter(w => w === 'SINGLE_PERIOD').length;
+  if (singlePeriodCount > 0) distinctWarnings.push(`${singlePeriodCount} buổi chỉ có 1 tiết (hiệu suất thấp)`);
+
+  // Generate Conclusions
+  const conclusions: string[] = [];
+  
+  // 1. Time distribution
+  const firstHalfWeeks = data.weeks.length / 2;
+  const firstHalfHours = Object.entries(hoursByWeek).filter(([w]) => parseInt(w) <= firstHalfWeeks).reduce((acc, [, h]) => acc + h, 0);
+  if (firstHalfHours > totalHours * 0.6) conclusions.push("Khối lượng tập trung đầu học kỳ");
+  else if (firstHalfHours < totalHours * 0.4) conclusions.push("Khối lượng tập trung cuối học kỳ");
+  else conclusions.push("Khối lượng phân bổ đều giữa học kỳ");
+
+  // 2. Type
+  if (typeDistribution[CourseType.TH] > typeDistribution[CourseType.LT]) 
+    conclusions.push(`Thực hành chiếm ưu thế (${Math.round(typeDistribution[CourseType.TH]/totalHours*100)}%)`);
+  else 
+    conclusions.push(`Lý thuyết chiếm ưu thế (${Math.round(typeDistribution[CourseType.LT]/totalHours*100)}%)`);
+
+  // 3. Peak time
+  const maxShift = Object.entries(shiftStats).sort((a, b) => b[1].hours - a[1].hours)[0][0];
+  const maxShiftVi = maxShift === 'morning' ? 'Sáng' : maxShift === 'afternoon' ? 'Chiều' : 'Tối';
+  const busyDayVi = VI_DAYS_OF_WEEK[DAYS_OF_WEEK.indexOf(busiestDay.day)];
+  conclusions.push(`${maxShiftVi} và ${busyDayVi} là thời gian cao điểm`);
+
+  // 4. Efficiency
+  if (singlePeriodCount > 0 || weekendCount > 0) conclusions.push("Có ca lẻ và dạy cuối tuần cần tối ưu");
 
   return {
     totalWeeks: data.weeks.length,
@@ -98,6 +201,12 @@ export const calculateMetrics = (data: ScheduleData): Metrics => {
     hoursByWeek,
     typeDistribution,
     shiftStats,
-    topRooms
+    topRooms,
+    classDistribution,
+    coTeachers,
+    warnings: distinctWarnings,
+    conclusions,
+    peakWeekHeatmap,
+    peakWeekShiftStats
   };
 };

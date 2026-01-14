@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, AlertCircle, CalendarPlus, LayoutTemplate, Columns } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, AlertCircle, CalendarPlus, LayoutTemplate, Columns, Zap } from 'lucide-react';
 import { WeekSchedule, Thresholds, CourseSession, DaySchedule, FilterState, CourseType } from '../types';
 import { VI_DAYS_OF_WEEK, DAYS_OF_WEEK, SESSION_COLORS } from '../constants';
 import FilterBar from './FilterBar';
@@ -9,6 +9,7 @@ interface WeeklyViewProps {
   week: WeekSchedule;
   onNext: () => void;
   onPrev: () => void;
+  onCurrent: () => void;
   isFirst: boolean;
   isLast: boolean;
   totalWeeks: number;
@@ -25,10 +26,53 @@ const SLOT_TIMES: Record<number, string> = {
   10: "171000", 11: "180000", 12: "185000"
 };
 
+// Helper to determine if a session is "Current"
+const isSessionCurrent = (session: CourseSession, sessionDateStr: string): boolean => {
+  const now = new Date();
+  
+  // 1. Check Date
+  // sessionDateStr format: "dd/mm/yyyy"
+  const [d, m, y] = sessionDateStr.split('/').map(Number);
+  const sessionDate = new Date(y, m - 1, d);
+  
+  if (now.getDate() !== sessionDate.getDate() || 
+      now.getMonth() !== sessionDate.getMonth() || 
+      now.getFullYear() !== sessionDate.getFullYear()) {
+    return false;
+  }
+
+  // 2. Check Time
+  const [startP, endP] = session.timeSlot.split('-').map(Number);
+  const startStr = SLOT_TIMES[startP]; // "070000"
+  
+  // Estimate end time based on CourseType
+  const durationMin = session.type === CourseType.LT ? 45 : 60;
+  
+  if (!startStr) return false;
+
+  const currentH = now.getHours();
+  const currentM = now.getMinutes();
+  const currentTotalM = currentH * 60 + currentM;
+
+  const startH = parseInt(startStr.substring(0, 2));
+  const startM = parseInt(startStr.substring(2, 4));
+  const startTotalM = startH * 60 + startM;
+
+  // End time of the LAST period in the slot
+  const lastStartStr = SLOT_TIMES[endP] || startStr;
+  const lastStartH = parseInt(lastStartStr.substring(0, 2));
+  const lastStartM = parseInt(lastStartStr.substring(2, 4));
+  const endTotalM = (lastStartH * 60 + lastStartM) + durationMin;
+
+  return currentTotalM >= startTotalM && currentTotalM <= endTotalM;
+};
+
+
 const WeeklyView: React.FC<WeeklyViewProps> = ({ 
   week, 
   onNext, 
   onPrev, 
+  onCurrent,
   isFirst, 
   isLast, 
   totalWeeks, 
@@ -124,23 +168,31 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
     return true;
   };
 
-  const renderSessionCell = (sessions: CourseSession[], isVertical: boolean = false) => {
+  const renderSessionCell = (sessions: CourseSession[], dayIdx: number, isVertical: boolean = false) => {
     const filtered = sessions.filter(filterSession);
+    const dateStr = getDayDateString(dayIdx);
+
     if (filtered.length === 0) return isVertical ? <div className="text-[10px] text-slate-300 dark:text-slate-700 italic">Trống</div> : null;
     return (
       <div className={`flex flex-col gap-2 ${isVertical ? 'w-full' : ''}`}>
         {filtered.map((session, sidx) => {
           const currentType = overrides[session.courseCode] || session.type;
+          const isCurrent = isSessionCurrent(session, dateStr);
+
           return (
             <div 
               key={`${session.courseCode}-${session.timeSlot}-${sidx}`}
-              className={`p-3 rounded-xl border-l-4 shadow-sm text-left ${SESSION_COLORS[session.sessionTime]} dark:bg-opacity-10 dark:border-opacity-60 transition-all ${session.hasConflict ? 'conflict-border' : ''}`}
+              className={`p-3 rounded-xl border-l-4 shadow-sm text-left ${SESSION_COLORS[session.sessionTime]} dark:bg-opacity-10 dark:border-opacity-60 transition-all 
+                ${session.hasConflict ? 'conflict-border' : ''}
+                ${isCurrent ? 'ring-2 ring-blue-500 scale-[1.02] shadow-lg z-10' : ''}
+              `}
             >
               <div className="flex justify-between items-start gap-1">
                 <p className="text-[11px] font-bold leading-tight mb-1 text-slate-800 dark:text-slate-100">
                   {session.courseName}
                 </p>
                 {session.hasConflict && <AlertCircle size={14} className="text-red-500 flex-shrink-0" />}
+                {isCurrent && <span className="absolute -top-1 -right-1 flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span></span>}
               </div>
               <p className="text-[10px] text-slate-600 dark:text-slate-400 mb-1 leading-tight">
                 <span className="font-bold text-slate-700 dark:text-slate-200">{session.className}</span>
@@ -173,6 +225,14 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
 
         <div className="flex items-center gap-3">
           <button 
+            onClick={onCurrent}
+            className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-100 transition-colors shadow-sm"
+          >
+            <Zap size={14} className="fill-current" />
+            <span>Tuần hiện tại</span>
+          </button>
+
+          <button 
             onClick={() => setViewMode(viewMode === 'horizontal' ? 'vertical' : 'horizontal')}
             className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors shadow-sm"
           >
@@ -203,7 +263,7 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
         filters={filters} 
         onChange={setFilters} 
         uniqueRooms={uniqueData.rooms} 
-        uniqueTeachers={uniqueData.teachers}
+        uniqueTeachers={uniqueData.teachers} 
         uniqueClasses={uniqueData.classes}
       />
 
@@ -233,9 +293,9 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
                       <p className="text-[10px] font-bold text-slate-500 uppercase">{shift.label}</p>
                       <p className="text-[9px] text-slate-400 mt-1">{shift.time}</p>
                     </td>
-                    {DAYS_OF_WEEK.map(day => (
+                    {DAYS_OF_WEEK.map((day, dayIdx) => (
                       <td key={`${day}-${shift.key}`} className="p-3 border border-slate-100 dark:border-slate-800 align-top min-h-[140px]">
-                        {renderSessionCell(week.days[day][shift.key as keyof DaySchedule])}
+                        {renderSessionCell(week.days[day][shift.key as keyof DaySchedule], dayIdx)}
                       </td>
                     ))}
                   </tr>
@@ -260,15 +320,15 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-800">
                     <div className="p-4">
                       <div className="text-[9px] font-bold text-slate-400 uppercase mb-3 flex items-center justify-between">Sáng <span>07:00</span></div>
-                      {renderSessionCell(dayData.morning, true)}
+                      {renderSessionCell(dayData.morning, idx, true)}
                     </div>
                     <div className="p-4">
                       <div className="text-[9px] font-bold text-slate-400 uppercase mb-3 flex items-center justify-between">Chiều <span>13:30</span></div>
-                      {renderSessionCell(dayData.afternoon, true)}
+                      {renderSessionCell(dayData.afternoon, idx, true)}
                     </div>
                     <div className="p-4">
                       <div className="text-[9px] font-bold text-slate-400 uppercase mb-3 flex items-center justify-between">Tối <span>17:10</span></div>
-                      {renderSessionCell(dayData.evening, true)}
+                      {renderSessionCell(dayData.evening, idx, true)}
                     </div>
                  </div>
                </div>
@@ -277,7 +337,7 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
         </div>
       )}
       <div className="text-center text-slate-400 text-[10px] mt-8">
-        © 2026 TdyPhan
+        © 2026 TdyPhan | Gg AI Studio
       </div>
     </div>
   );
