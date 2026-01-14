@@ -1,13 +1,14 @@
 
 import React, { useRef, useState } from 'react';
-import { Upload, FileCode, CheckCircle2, Lock } from 'lucide-react';
+import { Upload, FileCode, CheckCircle2, Lock, ArrowLeft } from 'lucide-react';
 
 interface UploadZoneProps {
   onUpload: (content: string) => void;
   onDemoLoad: (code: string) => void;
+  onCancel?: () => void;
 }
 
-const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onDemoLoad }) => {
+const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onDemoLoad, onCancel }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [secretCode, setSecretCode] = useState('');
@@ -55,7 +56,17 @@ const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onDemoLoad }) => {
   };
 
   return (
-    <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+      {onCancel && (
+        <button 
+          onClick={onCancel}
+          className="absolute top-4 left-4 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
+          title="Hủy bỏ & Quay lại"
+        >
+          <ArrowLeft size={20} />
+        </button>
+      )}
+
       <div className="p-8">
         <h2 className="text-xl font-black text-center text-slate-800 dark:text-white mb-2 uppercase tracking-tight">Phân Tích Lịch Giảng Dạy</h2>
         <p className="text-slate-500 text-center mb-8 text-sm">Tải lên file HTML từ hệ thống hoặc file JSON backup để bắt đầu</p>

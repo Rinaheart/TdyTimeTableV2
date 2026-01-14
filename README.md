@@ -101,4 +101,4 @@ Giao diện trực quan giúp nắm bắt toàn bộ tiến độ giảng dạy:
 Dự án được phát triển với mục đích cộng đồng, giúp giảng viên tối ưu hóa quy trình quản lý thời gian giảng dạy.
 
 ---
-*Built with ❤️ and ☕ using Gemini 2.0 Flash Thinking*
+*Built with ❤️ and ☕ using Gemini 3 Pro Preview*

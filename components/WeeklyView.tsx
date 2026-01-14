@@ -26,12 +26,24 @@ const SLOT_TIMES: Record<number, string> = {
   10: "171000", 11: "180000", 12: "185000"
 };
 
-// Helper to determine if a session is "Current"
+const getTeacherColor = (name: string) => {
+  const colors = [
+    'bg-red-100 text-red-700 border-red-200',
+    'bg-orange-100 text-orange-700 border-orange-200', 
+    'bg-amber-100 text-amber-700 border-amber-200',
+    'bg-lime-100 text-lime-700 border-lime-200',
+    'bg-cyan-100 text-cyan-700 border-cyan-200',
+    'bg-sky-100 text-sky-700 border-sky-200',
+    'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200',
+    'bg-pink-100 text-pink-700 border-pink-200'
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+};
+
 const isSessionCurrent = (session: CourseSession, sessionDateStr: string): boolean => {
   const now = new Date();
-  
-  // 1. Check Date
-  // sessionDateStr format: "dd/mm/yyyy"
   const [d, m, y] = sessionDateStr.split('/').map(Number);
   const sessionDate = new Date(y, m - 1, d);
   
@@ -41,11 +53,9 @@ const isSessionCurrent = (session: CourseSession, sessionDateStr: string): boole
     return false;
   }
 
-  // 2. Check Time
   const [startP, endP] = session.timeSlot.split('-').map(Number);
-  const startStr = SLOT_TIMES[startP]; // "070000"
+  const startStr = SLOT_TIMES[startP];
   
-  // Estimate end time based on CourseType
   const durationMin = session.type === CourseType.LT ? 45 : 60;
   
   if (!startStr) return false;
@@ -58,7 +68,6 @@ const isSessionCurrent = (session: CourseSession, sessionDateStr: string): boole
   const startM = parseInt(startStr.substring(2, 4));
   const startTotalM = startH * 60 + startM;
 
-  // End time of the LAST period in the slot
   const lastStartStr = SLOT_TIMES[endP] || startStr;
   const lastStartH = parseInt(lastStartStr.substring(0, 2));
   const lastStartM = parseInt(lastStartStr.substring(2, 4));
@@ -178,6 +187,8 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
         {filtered.map((session, sidx) => {
           const currentType = overrides[session.courseCode] || session.type;
           const isCurrent = isSessionCurrent(session, dateStr);
+          // Hide teacher tag if filtered by teacher
+          const showTeacher = !filters.teacher; 
 
           return (
             <div 
@@ -198,6 +209,13 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
                 <span className="font-bold text-slate-700 dark:text-slate-200">{session.className}</span>
                 <span className="font-normal opacity-70 ml-1">({session.group})</span>
               </p>
+              
+              {showTeacher && (
+                <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded border inline-block mb-1.5 truncate max-w-full ${getTeacherColor(session.teacher)}`}>
+                  {session.teacher}
+                </div>
+              )}
+
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[9px] font-medium opacity-70 uppercase tracking-tight">Tiết {session.timeSlot}</span>
                 <span className={`text-[8px] font-bold px-1 rounded ${currentType === CourseType.LT ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>

@@ -32,6 +32,7 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false); // New state to handle upload screen visibility
   
   // Default expanded on desktop (false), collapsed on mobile (true)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 1024 : true);
@@ -132,11 +133,11 @@ const App: React.FC = () => {
       if (firstWeekStart && lastWeekEnd) {
         if (now > lastWeekEnd) {
            // Case 2: Old Calendar
-           message = `✅ Tải lịch thành công! Tuy nhiên, đây là dữ liệu của kỳ trước (Kết thúc ngày ${lastWeekEnd.toLocaleDateString('vi-VN')}). Đang hiển thị tuần cuối cùng.`;
+           message = `✅ Tải lịch thành công! Dữ liệu kỳ trước (Kết thúc ${lastWeekEnd.toLocaleDateString('vi-VN')}).`;
            targetWeekIdx = parsedData.weeks.length - 1;
         } else if (now < firstWeekStart) {
            // Case 3: Future Calendar
-           message = `✅ Đã tải lịch mới! Học kỳ chưa bắt đầu. Đang hiển thị tuần đầu tiên của lịch giảng (${firstWeekStart.toLocaleDateString('vi-VN')}).`;
+           message = `✅ Đã tải lịch mới! Học kỳ bắt đầu ngày ${firstWeekStart.toLocaleDateString('vi-VN')}.`;
            targetWeekIdx = 0;
         } else {
            // Case 1: Current Calendar
@@ -148,8 +149,7 @@ const App: React.FC = () => {
            });
            const actualIdx = currentWIdx !== -1 ? currentWIdx : 0;
            targetWeekIdx = actualIdx;
-           const currentWeekRange = parsedData.weeks[actualIdx].dateRange.replace('Từ ngày: ', '').replace('đến ngày ', '- ');
-           message = `✅ Tải lịch thành công! [${parsedData.metadata.semester} - ${parsedData.metadata.academicYear}]. Đang chuyển đến tuần hiện tại (Tuần ${parsedData.weeks[actualIdx].weekNumber}, ${currentWeekRange}).`;
+           message = `✅ Tải lịch giảng thành công. Đang chuyển đến tuần hiện tại.`;
         }
       } else {
         message = "✅ Tải lịch thành công!";
@@ -164,12 +164,13 @@ const App: React.FC = () => {
       setCurrentWeekIndex(targetWeekIdx);
       setToastMessage(message);
       setIsProcessing(false);
+      setIsUploading(false); // Hide upload screen
       setShowSuccess(true);
       
-      // Hide Success Screen after 3s
+      // Hide Success Screen after 2s (reduced from 3s)
       setTimeout(() => {
         setShowSuccess(false);
-      }, 3000);
+      }, 2000);
 
     }, 800);
   };
@@ -235,6 +236,18 @@ const App: React.FC = () => {
     }
   };
 
+  // Triggered by Sidebar "Tải dữ liệu"
+  const handleResetRequest = () => {
+    setIsUploading(true);
+    setError(null);
+  };
+
+  // Triggered by "Thoát" button in UploadZone
+  const handleCancelUpload = () => {
+    setIsUploading(false);
+    setError(null);
+  };
+
   // SUCCESS SCREEN
   if (showSuccess) {
      return (
@@ -257,10 +270,15 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-    if (!data || !metrics) {
+    // If no data OR explicitly in upload mode
+    if (!data || !metrics || isUploading) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[80vh] p-8">
-          <UploadZone onUpload={handleFileUpload} onDemoLoad={handleDemoLoad} />
+          <UploadZone 
+            onUpload={handleFileUpload} 
+            onDemoLoad={handleDemoLoad} 
+            onCancel={data ? handleCancelUpload : undefined} // Only show cancel if we have data to go back to
+          />
           {error && (
             <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-2 text-sm max-w-lg">
               <AlertTriangle size={18} className="flex-shrink-0" />
@@ -314,7 +332,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen transition-colors duration-200 bg-white dark:bg-slate-950 overflow-x-hidden">
-      {data && (
+      {data && !isUploading && (
         <Header 
           activeTab={activeTab} 
           metadata={data.metadata} 
@@ -326,19 +344,14 @@ const App: React.FC = () => {
         />
       )}
       
-      <div className={`flex ${data ? 'pt-14' : ''}`}>
-        {data && (
+      <div className={`flex ${data && !isUploading ? 'pt-14' : ''}`}>
+        {data && !isUploading && (
           <Sidebar 
             activeTab={activeTab} 
             onTabChange={setActiveTab} 
             collapsed={sidebarCollapsed}
             toggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-            onReset={() => {
-              // Fade out effect manually or just reset
-              setData(null);
-              setOverrides({});
-              localStorage.removeItem('last_schedule_data');
-            }}
+            onReset={handleResetRequest}
           />
         )}
 
@@ -346,7 +359,7 @@ const App: React.FC = () => {
           ref={mainContentRef}
           onClick={handleClickOutside}
           className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
-            data ? (sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64') : ''
+            data && !isUploading ? (sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64') : ''
           }`}
         >
           <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative">
@@ -355,7 +368,7 @@ const App: React.FC = () => {
             </div>
           </div>
           
-          {!data && (
+          {(!data || isUploading) && (
             <div className="p-4 text-center text-[11px] text-slate-400 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-900">
               © 2026 TdyPhan | Google AI Studio
             </div>

@@ -24,11 +24,11 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const getTitle = () => {
     switch (activeTab) {
-      case TabType.WEEK: return "Lịch Tuần";
-      case TabType.STATS: return "Thống Kê";
-      case TabType.OVERVIEW: return "Lịch Học Kỳ";
-      case TabType.SETTINGS: return "Cài Đặt";
-      case TabType.ABOUT: return "Thông Tin";
+      case TabType.WEEK: return "Lịch tuần";
+      case TabType.STATS: return "Phân tích giảng dạy";
+      case TabType.OVERVIEW: return "Lịch học kỳ";
+      case TabType.SETTINGS: return "Cấu hình";
+      case TabType.ABOUT: return "Thông tin";
       default: return "Dashboard";
     }
   };
