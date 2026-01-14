@@ -58,7 +58,7 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
     value: d.count 
   }));
 
-  // Improved Treemap Logic
+  // Improved Logic for Subjects
   const subjectWeights = React.useMemo(() => {
     const map = new Map<string, number>();
     data.allCourses.forEach(c => {
@@ -304,7 +304,40 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
          </div>
       </div>
 
-      {/* 7. WARNINGS */}
+      {/* 7. SUBJECT DETAILS - BAR CHART (REPLACED TREEMAP) */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+         <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+           <Layers size={16} className="text-indigo-500" /> Chi tiết theo môn
+         </h3>
+         <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={subjectWeights} layout="vertical" margin={{ left: 20, right: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" className="dark:stroke-slate-700" />
+                <XAxis type="number" hide />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  tick={{fontSize: 10}} 
+                  width={150} 
+                  axisLine={false} 
+                  tickLine={false}
+                  interval={0}
+                />
+                <Tooltip 
+                  cursor={{fill: 'transparent'}} 
+                  contentStyle={{borderRadius: '8px', fontSize: '12px'}} 
+                />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={18}>
+                  {subjectWeights.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={getSubjectColor(index)} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+         </div>
+      </div>
+
+      {/* 8. WARNINGS */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm border-l-4 border-l-amber-500">
          <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest mb-4 flex items-center gap-2">
            <AlertTriangle size={16} /> Chỉ số cần Lưu ý & Tối ưu
@@ -320,40 +353,6 @@ const StatisticsView: React.FC<StatisticsViewProps> = ({ metrics, data }) => {
          ) : (
            <p className="text-sm text-emerald-500 font-bold flex items-center gap-2"><span className="text-lg">✓</span> Không có cảnh báo nào. Lịch dạy hợp lý.</p>
          )}
-      </div>
-
-      {/* 8. TREEMAP - UPDATED */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-         <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-           <Layers size={16} className="text-indigo-500" /> Trọng số Khối lượng theo Môn học
-         </h3>
-         <div className="flex flex-wrap gap-1 h-auto min-h-[150px]">
-            {subjectWeights.map((c, i) => {
-               // Calculate relative size strictly based on total hours
-               const percentage = (c.value / metrics.totalHours) * 100;
-               // Minimal visibility width
-               const width = Math.max(percentage, 5);
-               const color = getSubjectColor(i);
-               
-               return (
-                 <div 
-                   key={i} 
-                   className="flex-grow p-3 rounded-lg text-white relative overflow-hidden group shadow-sm transition-all hover:scale-[1.02]"
-                   style={{ 
-                     width: `${width}%`, 
-                     backgroundColor: color,
-                     opacity: 0.9
-                   }}
-                 >
-                   <p className="text-[10px] font-bold truncate opacity-90">{c.name}</p>
-                   <p className="text-xl font-black">{c.value}</p>
-                   <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-xs font-bold">{percentage.toFixed(1)}%</span>
-                   </div>
-                 </div>
-               )
-            })}
-         </div>
       </div>
 
       {/* 9. CO-TEACHERS */}
