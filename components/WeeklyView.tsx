@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, AlertCircle, CalendarPlus, LayoutTemplate, Columns, Zap, X, CheckSquare, Square, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, AlertCircle, CalendarPlus, LayoutTemplate, Columns, Zap, X, CheckSquare, Square, Download, Copy, Check } from 'lucide-react';
 import { WeekSchedule, Thresholds, CourseSession, DaySchedule, FilterState, CourseType } from '../types';
 import { VI_DAYS_OF_WEEK, DAYS_OF_WEEK, SESSION_COLORS, PERIOD_TIMES } from '../constants';
 import FilterBar from './FilterBar';
@@ -21,7 +21,6 @@ interface WeeklyViewProps {
 }
 
 // Keep for rendering check (isCurrent)
-// Updated Evening slots to 11, 12, 13 matches PERIOD_TIMES
 const SLOT_TIMES_LOOKUP: Record<number, string> = {
   1: "070000", 2: "075500", 3: "085000", 4: "094500",
   5: "104000",
@@ -101,6 +100,7 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [availableTeachers, setAvailableTeachers] = useState<string[]>([]);
   const [selectedTeachers, setSelectedTeachers] = useState<Set<string>>(new Set());
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const getDayDateString = (dayIndex: number) => {
     try {
@@ -151,6 +151,7 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
     const sortedTeachers = Array.from(teachers).sort();
     setAvailableTeachers(sortedTeachers);
     setSelectedTeachers(new Set(sortedTeachers)); // Default select all
+    setCopySuccess(false);
     setIsExportModalOpen(true);
   };
 
@@ -169,7 +170,7 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
     }
   };
 
-  const confirmExportICS = () => {
+  const generateICSContent = () => {
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//TdyPhan//Timetable//VN\nCALSCALE:GREGORIAN\n";
     
     DAYS_OF_WEEK.forEach((dayName, idx) => {
@@ -205,10 +206,10 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
         // Use abbreviation for Export if available
         const displayName = abbreviations[s.courseName] || s.courseName;
 
-        // Formatted Description with " / " separator
+        // Formatted Description: Replace newline with " / "
         const description = `GV: ${s.teacher} / Lớp: ${s.className} / Tiết: ${s.timeSlot} (${currentType}) / Nhóm: ${s.group} / Phòng: ${s.room}`;
         
-        // Summary Format: [Name] - [Class]
+        // Summary Format: [Name/Abbr] - [Class]
         const summary = `${displayName} - ${s.className}`;
 
         icsContent += "BEGIN:VEVENT\n";
@@ -222,7 +223,11 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
     });
 
     icsContent += "END:VCALENDAR";
-    
+    return icsContent;
+  };
+
+  const handleDownloadICS = () => {
+    const icsContent = generateICSContent();
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
@@ -230,8 +235,18 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
     setIsExportModalOpen(false);
+  };
+
+  const handleCopyICS = async () => {
+    const icsContent = generateICSContent();
+    try {
+      await navigator.clipboard.writeText(icsContent);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
   };
 
   const filterSession = (s: CourseSession) => {
@@ -349,19 +364,26 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
                </div>
             </div>
 
-            <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-b-2xl flex justify-end gap-3">
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-b-2xl flex items-center justify-between gap-3">
                <button 
-                 onClick={() => setIsExportModalOpen(false)}
-                 className="px-4 py-2 text-slate-500 font-bold text-xs rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-               >
-                 Hủy bỏ
-               </button>
-               <button 
-                 onClick={confirmExportICS}
+                 onClick={handleCopyICS}
                  disabled={selectedTeachers.size === 0}
-                 className="px-6 py-2 bg-blue-600 disabled:bg-slate-400 text-white font-bold text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                 className={`px-4 py-2.5 font-bold text-xs rounded-xl shadow-sm border transition-all flex items-center gap-2 flex-1 justify-center
+                   ${copySuccess 
+                     ? 'bg-green-100 text-green-700 border-green-200' 
+                     : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                   } disabled:opacity-50`}
                >
-                 <Download size={16} /> Xuất file .ics
+                 {copySuccess ? <Check size={16} /> : <Copy size={16} />}
+                 {copySuccess ? 'Đã copy!' : 'Copy nội dung'}
+               </button>
+
+               <button 
+                 onClick={handleDownloadICS}
+                 disabled={selectedTeachers.size === 0}
+                 className="px-6 py-2.5 bg-blue-600 disabled:bg-slate-400 text-white font-bold text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+               >
+                 <Download size={16} /> Tải file .ics
                </button>
             </div>
           </div>

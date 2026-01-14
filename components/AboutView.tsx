@@ -11,8 +11,9 @@ const CHANGE_LOG = [
     version: 'v0.012',
     date: '2026-01-16',
     changes: [
-      'Export: Tính năng xuất Google Calendar (.ics) nâng cao: Chọn GV cần xuất, định dạng giờ chuẩn xác theo quy định, fix lỗi xuống dòng ở mô tả.',
-      'Export: Áp dụng Tên viết tắt (nếu có) vào tiêu đề sự kiện Google Calendar để gọn gàng hơn (VD: CSSKCĐ-LT - ĐD 18A).',
+      'Export: Thêm tùy chọn "Copy nội dung" ICS vào bộ nhớ tạm để dán nhanh vào các công cụ lịch.',
+      'Export: Cập nhật định dạng tiêu đề (Môn - Lớp) và mô tả (dùng dấu ngăn cách " / " thay vì xuống dòng) để tương thích tốt hơn với Google Calendar.',
+      'Export: Tính năng xuất Google Calendar (.ics) nâng cao: Chọn GV cần xuất, định dạng giờ chuẩn xác theo quy định.',
       'Tính năng: Hỗ trợ "Tên môn học viết tắt" (Abbreviations) với chế độ Đề xuất tự động và Reset.',
       'Input: Bổ sung tính năng Paste trực tiếp mã nguồn HTML/JSON vào ứng dụng.',
       'UI Thống kê: Card "Tổng quan hoạt động" chuyển sang tone màu Cam-Vàng nổi bật.',
