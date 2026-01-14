@@ -5,7 +5,6 @@ import {
   Calendar, 
   BarChart3, 
   Settings as SettingsIcon, 
-  Menu,
   LogOut,
   Info
 } from 'lucide-react';
@@ -32,21 +31,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onReset, coll
     <aside 
       className={`
         bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 
-        flex flex-col h-screen transition-all duration-300 z-50 fixed lg:sticky top-0
+        flex flex-col transition-all duration-300 z-40 fixed top-14 bottom-0 left-0
         ${collapsed 
           ? '-translate-x-full lg:translate-x-0 lg:w-16' 
           : 'translate-x-0 w-64 shadow-2xl lg:shadow-none'
         }
       `}
     >
-      <div className="p-4 flex items-center gap-4">
-        <button onClick={toggleCollapse} className="p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors">
-          <Menu size={20} />
-        </button>
-        <span className={`font-bold text-slate-700 dark:text-slate-200 truncate transition-opacity duration-300 ${collapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'}`}>Timetable</span>
-      </div>
-
-      <nav className="flex-1 px-2 mt-4 space-y-1">
+      <nav className="flex-1 px-2 mt-4 space-y-1 overflow-y-auto custom-scrollbar">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
