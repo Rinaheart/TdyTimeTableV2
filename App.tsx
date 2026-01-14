@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AlertTriangle, Menu } from 'lucide-react';
-import { ScheduleData, TabType, Metrics, Thresholds, CourseType } from './types';
+import { ScheduleData, TabType, Metrics, Thresholds, CourseType, CourseSession } from './types';
 import { DEFAULT_THRESHOLDS } from './constants';
 import { parseScheduleHTML } from './services/parser';
 import { calculateMetrics } from './services/analyzer';
@@ -16,7 +15,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import UploadZone from './components/UploadZone';
 
-const VERSION = '0.009';
+const VERSION = '0.010';
 
 const App: React.FC = () => {
   const [data, setData] = useState<ScheduleData | null>(null);
@@ -27,7 +26,9 @@ const App: React.FC = () => {
   const [overrides, setOverrides] = useState<Record<string, CourseType>>({});
   const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  
+  // Default expanded on desktop (false), collapsed on mobile (true)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 1024 : true);
   const mainContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -86,17 +87,16 @@ const App: React.FC = () => {
         setError(null);
         localStorage.setItem('last_schedule_data', JSON.stringify(parsedData));
       } else {
-        setError("Định dạng file không tương thích.");
+        throw new Error("Dữ liệu không hợp lệ.");
       }
-    } catch (err) {
-      setError("Có lỗi xảy ra trong quá trình xử lý.");
+    } catch (err: any) {
+      setError(err.message || "File không đúng định dạng hoặc thiếu cấu trúc HTML hợp lệ.");
     }
   }, []);
 
   const handleDemoLoad = (code: string) => {
     const validCodes = ['TdyHK1', 'Tdy12345'];
     if (validCodes.includes(code)) {
-      // Mocking DEMO data content
       const demoData = requireDemoData(); 
       setData(demoData);
       setOverrides({});
@@ -118,7 +118,7 @@ const App: React.FC = () => {
 
   // Close sidebar on mobile when clicking outside
   const handleClickOutside = () => {
-    if (window.innerWidth < 640 && !sidebarCollapsed) {
+    if (window.innerWidth < 1024 && !sidebarCollapsed) {
       setSidebarCollapsed(true);
     }
   };
@@ -129,8 +129,8 @@ const App: React.FC = () => {
         <div className="flex flex-col items-center justify-center min-h-[80vh] p-8">
           <UploadZone onUpload={handleFileUpload} onDemoLoad={handleDemoLoad} />
           {error && (
-            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-2 text-sm">
-              <AlertTriangle size={18} />
+            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-2 text-sm max-w-lg">
+              <AlertTriangle size={18} className="flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
@@ -194,11 +194,11 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* Floating Menu Button for mobile when sidebar is hidden */}
+      {/* Floating Menu Button for mobile */}
       {data && sidebarCollapsed && (
         <button 
-          onClick={() => setSidebarCollapsed(false)}
-          className="sm:hidden fixed top-3 left-4 z-40 p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-lg text-slate-600 dark:text-slate-300 animate-in slide-in-from-left-4 duration-300"
+          onClick={(e) => { e.stopPropagation(); setSidebarCollapsed(false); }}
+          className="lg:hidden fixed top-3 left-4 z-40 p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-lg text-slate-600 dark:text-slate-300 animate-in slide-in-from-left-4 duration-300"
         >
           <Menu size={20} />
         </button>
@@ -235,33 +235,130 @@ const App: React.FC = () => {
   );
 };
 
-// Mock data function to simulate loading DEMO file
+// Data construction helpers for DEMO
+const createSession = (
+  code: string, name: string, group: string, className: string, 
+  room: string, timeSlot: string, day: string, session: 'morning'|'afternoon'|'evening'
+): CourseSession => {
+  const [start, end] = timeSlot.split('-').map(Number);
+  return {
+    courseCode: code, courseName: name, group, className,
+    timeSlot, periodCount: (end - start) + 1, room, teacher: "DEMO",
+    actualHours: 0, type: code.includes('-LT') ? CourseType.LT : CourseType.TH,
+    dayOfWeek: day, sessionTime: session
+  };
+};
+
 function requireDemoData(): ScheduleData {
+  const courses = [
+    { code: "MHCĐO1052-LT.005", name: "Chăm sóc sức khỏe cộng đồng", group: "Nhóm 5", class: "ĐD 18E" },
+    { code: "MHCĐO1052-LT.002", name: "Chăm sóc sức khỏe cộng đồng", group: "Nhóm 2", class: "ĐD 18B" },
+    { code: "MHCĐO1052-LT.001", name: "Chăm sóc sức khỏe cộng đồng", group: "Nhóm 1", class: "ĐD 18A" },
+    { code: "MHCĐO1052-LT.004", name: "Chăm sóc sức khỏe cộng đồng", group: "Nhóm 4", class: "ĐD 18D" },
+    { code: "MHCĐO1092.001", name: "Thực hành Nghiên cứu khoa học", group: "Nhóm 1", class: "DS 13A" },
+    { code: "MHCĐO1092.002", name: "Thực hành Nghiên cứu khoa học", group: "Nhóm 2", class: "DS 13B" },
+    { code: "MHCĐO1092.004", name: "Thực hành Nghiên cứu khoa học", group: "Nhóm 4", class: "DS 13D" },
+    { code: "MHLSG1292.001", name: "Quản lý Hộ sinh & CS sức khỏe SSCĐ", group: "Nhóm 1", class: "HS 12" },
+  ];
+
+  // Helper to quickly find course info
+  const getC = (code: string) => courses.find(c => c.code === code) || courses[0];
+
   return {
     metadata: {
-      teacher: "Phan Đức Thái Duy",
+      teacher: "DEMO",
       semester: "2",
       academicYear: "2025-2026",
-      extractedDate: "2026-01-10T08:00:00.000Z"
+      extractedDate: new Date().toISOString()
     },
     weeks: [
       {
         weekNumber: 1,
         dateRange: "Từ ngày: 12/01/2026 đến ngày 18/01/2026",
         days: {
-          Monday: { morning: [{ courseCode: "MHCĐO1052-LT.005", courseName: "Chăm sóc cộng đồng", group: "Nhóm 5", className: "ĐD 18E", timeSlot: "1-4", periodCount: 4, room: ".B.102", teacher: "Phan Đức Thái Duy", actualHours: 0, type: CourseType.LT, dayOfWeek: "Monday", sessionTime: "morning" }], afternoon: [], evening: [] },
-          Tuesday: { morning: [], afternoon: [], evening: [] },
-          Wednesday: { morning: [], afternoon: [], evening: [] },
-          Thursday: { morning: [], afternoon: [], evening: [] },
-          Friday: { morning: [], afternoon: [], evening: [] },
-          Saturday: { morning: [], afternoon: [], evening: [] },
+          Monday: {
+            morning: [createSession("MHCĐO1052-LT.005", getC("MHCĐO1052-LT.005").name, "Nhóm 5", "ĐD 18E", ".B.102", "1-4", "Monday", "morning")],
+            afternoon: [createSession("MHCĐO1092.002", getC("MHCĐO1092.002").name, "Nhóm 2", "DS 13B", ".B.106", "6-9", "Monday", "afternoon")],
+            evening: []
+          },
+          Tuesday: {
+            morning: [createSession("MHCĐO1052-LT.002", getC("MHCĐO1052-LT.002").name, "Nhóm 2", "ĐD 18B", ".B.102", "1-4", "Tuesday", "morning")],
+            afternoon: [createSession("MHCĐO1052-LT.001", getC("MHCĐO1052-LT.001").name, "Nhóm 1", "ĐD 18A", ".B.102", "6-9", "Tuesday", "afternoon")],
+            evening: []
+          },
+          Wednesday: {
+            morning: [createSession("MHCĐO1052-LT.005", getC("MHCĐO1052-LT.005").name, "Nhóm 5", "ĐD 18E", ".B.102", "1-4", "Wednesday", "morning")],
+            afternoon: [createSession("MHCĐO1052-LT.004", getC("MHCĐO1052-LT.004").name, "Nhóm 4", "ĐD 18D", ".B.102", "6-9", "Wednesday", "afternoon")],
+            evening: []
+          },
+          Thursday: {
+            morning: [createSession("MHCĐO1052-LT.002", getC("MHCĐO1052-LT.002").name, "Nhóm 2", "ĐD 18B", ".B.102", "1-4", "Thursday", "morning")],
+            afternoon: [
+              createSession("MHCĐO1052-LT.004", getC("MHCĐO1052-LT.004").name, "Nhóm 4", "ĐD 18D", ".B.102", "6-9", "Thursday", "afternoon"),
+              createSession("MHLSG1292.001", getC("MHLSG1292.001").name, "Nhóm 1", "HS 12", ".B.105", "6-9", "Thursday", "afternoon")
+            ],
+            evening: [createSession("MHCĐO1092.001", getC("MHCĐO1092.001").name, "Nhóm 1", "DS 13A", ".B.101", "11-13", "Thursday", "evening")]
+          },
+          Friday: {
+            morning: [createSession("MHCĐO1052-LT.001", getC("MHCĐO1052-LT.001").name, "Nhóm 1", "ĐD 18A", ".B.102", "1-4", "Friday", "morning")],
+            afternoon: [createSession("MHCĐO1092.004", getC("MHCĐO1092.004").name, "Nhóm 4", "DS 13D", ".B.104", "6-9", "Friday", "afternoon")],
+            evening: []
+          },
+          Saturday: {
+            morning: [createSession("MHCĐO1092.001", getC("MHCĐO1092.001").name, "Nhóm 1", "DS 13A", ".B.102", "1-4", "Saturday", "morning")],
+            afternoon: [],
+            evening: []
+          },
+          Sunday: { morning: [], afternoon: [], evening: [] }
+        }
+      },
+      {
+        weekNumber: 2,
+        dateRange: "Từ ngày: 19/01/2026 đến ngày 25/01/2026",
+        days: {
+          Monday: {
+            morning: [createSession("MHCĐO1052-LT.005", getC("MHCĐO1052-LT.005").name, "Nhóm 5", "ĐD 18E", ".B.102", "1-4", "Monday", "morning")],
+            afternoon: [createSession("MHCĐO1092.002", getC("MHCĐO1092.002").name, "Nhóm 2", "DS 13B", ".B.106", "6-9", "Monday", "afternoon")],
+            evening: []
+          },
+          Tuesday: {
+            morning: [createSession("MHCĐO1052-LT.002", getC("MHCĐO1052-LT.002").name, "Nhóm 2", "ĐD 18B", ".B.102", "1-4", "Tuesday", "morning")],
+            afternoon: [createSession("MHCĐO1052-LT.001", getC("MHCĐO1052-LT.001").name, "Nhóm 1", "ĐD 18A", ".B.102", "6-9", "Tuesday", "afternoon")],
+            evening: []
+          },
+          Wednesday: {
+            morning: [createSession("MHCĐO1052-LT.005", getC("MHCĐO1052-LT.005").name, "Nhóm 5", "ĐD 18E", ".B.102", "1-3", "Wednesday", "morning")],
+            afternoon: [createSession("MHCĐO1052-LT.004", getC("MHCĐO1052-LT.004").name, "Nhóm 4", "ĐD 18D", ".B.102", "6-9", "Wednesday", "afternoon")],
+            evening: []
+          },
+          Thursday: {
+            morning: [createSession("MHCĐO1052-LT.002", getC("MHCĐO1052-LT.002").name, "Nhóm 2", "ĐD 18B", ".B.102", "1-3", "Thursday", "morning")],
+            afternoon: [
+              createSession("MHCĐO1052-LT.004", getC("MHCĐO1052-LT.004").name, "Nhóm 4", "ĐD 18D", ".B.102", "6-8", "Thursday", "afternoon"),
+              createSession("MHLSG1292.001", getC("MHLSG1292.001").name, "Nhóm 1", "HS 12", ".B.105", "6-9", "Thursday", "afternoon")
+            ],
+            evening: [createSession("MHCĐO1092.001", getC("MHCĐO1092.001").name, "Nhóm 1", "DS 13A", ".B.101", "11-13", "Thursday", "evening")]
+          },
+          Friday: {
+            morning: [createSession("MHCĐO1052-LT.001", getC("MHCĐO1052-LT.001").name, "Nhóm 1", "ĐD 18A", ".B.102", "1-3", "Friday", "morning")],
+            afternoon: [createSession("MHCĐO1092.004", getC("MHCĐO1092.004").name, "Nhóm 4", "DS 13D", ".B.104", "6-9", "Friday", "afternoon")],
+            evening: []
+          },
+          Saturday: {
+            morning: [createSession("MHCĐO1092.001", getC("MHCĐO1092.001").name, "Nhóm 1", "DS 13A", ".B.102", "1-4", "Saturday", "morning")],
+            afternoon: [],
+            evening: []
+          },
           Sunday: { morning: [], afternoon: [], evening: [] }
         }
       }
     ],
-    allCourses: [
-      { code: "MHCĐO1052-LT.005", name: "Chăm sóc cộng đồng", totalPeriods: 4, totalSessions: 1, groups: ["Nhóm 5"], classes: ["ĐD 18E"], types: [CourseType.LT] }
-    ]
+    allCourses: courses.map(c => ({
+      code: c.code, name: c.name,
+      totalPeriods: 0, totalSessions: 0, // Calculated by analyzer
+      groups: [c.group], classes: [c.class],
+      types: [c.code.includes('-LT') ? CourseType.LT : CourseType.TH]
+    }))
   };
 }
 

@@ -15,6 +15,17 @@ export const parseScheduleHTML = (html: string): ScheduleData | null => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
+  // Validation: Check for essential structure
+  const weekCells = doc.querySelectorAll('.hitec-td-tkbTuan');
+  if (weekCells.length === 0) {
+    throw new Error("Không tìm thấy dữ liệu tuần (.hitec-td-tkbTuan). Vui lòng kiểm tra file HTML.");
+  }
+  
+  const table = doc.querySelector('table.table-bordered');
+  if (!table) {
+    throw new Error("Không tìm thấy bảng thời khóa biểu (table.table-bordered).");
+  }
+
   const teacher = doc.querySelector('.hitec-information h5')?.textContent?.trim() || "Unknown Teacher";
   const yearSemesterText = doc.querySelector('.hitec-year')?.textContent?.trim() || "";
   const semesterMatch = yearSemesterText.match(/Học kỳ:\s*(\d+)/);
@@ -60,6 +71,10 @@ export const parseScheduleHTML = (html: string): ScheduleData | null => {
       weeks.push(currentWeek);
       i += 3;
     }
+  }
+
+  if (weeks.length === 0) {
+    throw new Error("Không trích xuất được dữ liệu tuần nào.");
   }
 
   return {
