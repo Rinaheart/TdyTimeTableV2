@@ -36,9 +36,8 @@ export const PERIOD_TIMES: Record<number, { start: [number, number], end: [numbe
   8: { start: [15, 20], end: [16, 5] },
   9: { start: [16, 15], end: [17, 0] },
   
-  // Tối
-  10: { start: [17, 10], end: [17, 55] },
-  11: { start: [18, 0], end: [18, 45] },
-  12: { start: [18, 50], end: [19, 35] },
-  13: { start: [19, 45], end: [20, 30] } // Dự phòng
+  // Tối (Điều chỉnh theo yêu cầu: Bắt đầu từ tiết 11)
+  11: { start: [17, 10], end: [17, 55] },
+  12: { start: [18, 0], end: [18, 45] },
+  13: { start: [18, 50], end: [19, 35] }
 };

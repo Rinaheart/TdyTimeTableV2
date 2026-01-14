@@ -4,7 +4,7 @@ import { Thresholds, ScheduleData, CourseType } from '../types';
 import { 
   Shield, AlertTriangle, Save, RefreshCw, 
   FileJson, FileSpreadsheet, ChevronUp, ChevronDown, 
-  ListChecks, Check, Download, BellRing, Type, Wand2
+  ListChecks, Check, Download, BellRing, Type, Wand2, RotateCcw
 } from 'lucide-react';
 import { DEFAULT_THRESHOLDS } from '../constants';
 
@@ -107,6 +107,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     setToast({ message: "Đã tạo đề xuất tên viết tắt!", type: "success" });
   };
 
+  const resetAbbreviations = () => {
+    setTempAbbreviations({});
+    setToast({ message: "Đã xóa tất cả tên viết tắt! (Bấm Lưu để áp dụng)", type: "success" });
+  };
+
   const handleSaveThresholds = () => {
     onSave(tempThresholds);
     setToast({ message: "Đã lưu ngưỡng cảnh báo thành công!", type: "success" });
@@ -172,6 +177,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             <p className="text-xs text-slate-500 mt-1">Giúp hiển thị gọn gàng trên lịch tuần và file xuất Google Calendar.</p>
           </div>
           <div className="flex items-center gap-2">
+             <button 
+              onClick={resetAbbreviations}
+              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+            >
+              <RotateCcw size={14} /> Reset
+            </button>
             <button 
               onClick={suggestAbbreviations}
               className="px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-[10px] font-bold rounded-lg border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors flex items-center gap-2"

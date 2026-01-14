@@ -21,11 +21,12 @@ interface WeeklyViewProps {
 }
 
 // Keep for rendering check (isCurrent)
+// Updated Evening slots to 11, 12, 13 matches PERIOD_TIMES
 const SLOT_TIMES_LOOKUP: Record<number, string> = {
   1: "070000", 2: "075500", 3: "085000", 4: "094500",
   5: "104000",
   6: "133000", 7: "142500", 8: "152000", 9: "161500",
-  10: "171000", 11: "180000", 12: "185000"
+  11: "171000", 12: "180000", 13: "185000"
 };
 
 const getTeacherColor = (name: string) => {
@@ -204,11 +205,14 @@ const WeeklyView: React.FC<WeeklyViewProps> = ({
         // Use abbreviation for Export if available
         const displayName = abbreviations[s.courseName] || s.courseName;
 
-        // Correct Newline formatting for ICS Description: literal '\n'
-        const description = `GV: ${s.teacher}\\nLớp: ${s.className}\\nTiết: ${s.timeSlot} (${currentType})\\nNhóm: ${s.group}\\nPhòng: ${s.room}`;
+        // Formatted Description with " / " separator
+        const description = `GV: ${s.teacher} / Lớp: ${s.className} / Tiết: ${s.timeSlot} (${currentType}) / Nhóm: ${s.group} / Phòng: ${s.room}`;
+        
+        // Summary Format: [Name] - [Class]
+        const summary = `${displayName} - ${s.className}`;
 
         icsContent += "BEGIN:VEVENT\n";
-        icsContent += `SUMMARY:${displayName} (${currentType})\n`;
+        icsContent += `SUMMARY:${summary}\n`;
         icsContent += `LOCATION:${s.room}\n`;
         icsContent += `DESCRIPTION:${description}\n`;
         icsContent += `DTSTART:${y}${m}${d}T${startHStr}${startMStr}00\n`;

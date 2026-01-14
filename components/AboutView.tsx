@@ -11,9 +11,9 @@ const CHANGE_LOG = [
     version: 'v0.012',
     date: '2026-01-16',
     changes: [
-      'Tính năng: Hỗ trợ "Tên môn học viết tắt" (Abbreviations) giúp hiển thị gọn gàng trên màn hình nhỏ và file xuất Google Calendar.',
-      'Tính năng: Tự động đề xuất tên viết tắt thông minh (VD: Chăm sóc sức khỏe cộng đồng -> CSSKCĐ).',
       'Export: Tính năng xuất Google Calendar (.ics) nâng cao: Chọn GV cần xuất, định dạng giờ chuẩn xác theo quy định, fix lỗi xuống dòng ở mô tả.',
+      'Export: Áp dụng Tên viết tắt (nếu có) vào tiêu đề sự kiện Google Calendar để gọn gàng hơn (VD: CSSKCĐ-LT - ĐD 18A).',
+      'Tính năng: Hỗ trợ "Tên môn học viết tắt" (Abbreviations) với chế độ Đề xuất tự động và Reset.',
       'Input: Bổ sung tính năng Paste trực tiếp mã nguồn HTML/JSON vào ứng dụng.',
       'UI Thống kê: Card "Tổng quan hoạt động" chuyển sang tone màu Cam-Vàng nổi bật.',
       'UI Thống kê: Tối ưu biểu đồ Chi tiết môn học (Sắp xếp giảm dần, thêm đơn vị).',
@@ -167,9 +167,9 @@ const AboutView: React.FC<AboutViewProps> = ({ version }) => {
           <div className="space-y-3 bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
             <h4 className="text-[10px] font-black text-purple-600 uppercase tracking-widest border-l-2 border-purple-600 pl-2">Tối</h4>
             <ul className="text-[11px] space-y-1.5 text-slate-500 dark:text-slate-400 font-semibold">
-              <li className="flex justify-between"><span>Tiết 10:</span> <span>17:10 - 17:55</span></li>
-              <li className="flex justify-between"><span>Tiết 11:</span> <span>18:00 - 18:45</span></li>
-              <li className="flex justify-between"><span>Tiết 12:</span> <span>18:50 - 19:35</span></li>
+              <li className="flex justify-between"><span>Tiết 11:</span> <span>17:10 - 17:55</span></li>
+              <li className="flex justify-between"><span>Tiết 12:</span> <span>18:00 - 18:45</span></li>
+              <li className="flex justify-between"><span>Tiết 13:</span> <span>18:50 - 19:35</span></li>
             </ul>
           </div>
         </div>
