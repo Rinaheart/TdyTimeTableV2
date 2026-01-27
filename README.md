@@ -4,7 +4,7 @@
 [![Status](https://img.shields.io/badge/status-active-success.svg?style=flat-square)](https://github.com/your-username/your-repo-name)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](https://github.com/your-username/your-repo-name)
 
-**Hệ thống phân tích và quản lý lịch trình giảng dạy thông minh.** *Công cụ hỗ trợ đắc lực dành cho Giảng viên Khối Cao đẳng - Trường Đại học Y Dược, Đại học Huế.*
+**Hệ thống phân tích và quản lý lịch trình giảng dạy thông minh.** *Công cụ hỗ trợ dành cho Giảng viên Khối Cao đẳng - Trường ĐHYD, ĐH Huế.*
 
 ---
 
