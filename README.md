@@ -1,6 +1,6 @@
 # 📅 Phân Tích Lịch Giảng (Teaching Schedule Analytics)
 
-[![Version](https://img.shields.io/badge/véion-0.016-blue.svg?style=flat-square)](https://github.com/your-username/your-repo-name)
+[![Version](https://img.shields.io/badge/version-0.016-blue.svg?style=flat-square)](https://github.com/your-username/your-repo-name)
 [![Status](https://img.shields.io/badge/status-active-success.svg?style=flat-square)](https://github.com/your-username/your-repo-name)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](https://github.com/your-username/your-repo-name)
 
